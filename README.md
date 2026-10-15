@@ -41,12 +41,12 @@
   [ PostgreSQL Database (SQLAlchemy 2.0 Async + Alembic Migrations) ]
 ```
 
-- **Frontend:** Next.js (App Router), React 19, TypeScript, Tailwind CSS, shadcn/ui, Recharts
-- **Backend:** Python 3.14+, FastAPI, Pydantic v2, SQLAlchemy (asyncpg), Alembic
-- **Database:** PostgreSQL 16+ (Docker Compose)
+- **Frontend:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Lucide/Heroicons
+- **Backend:** Python 3.14+, FastAPI, Pydantic v2, SQLAlchemy 2.0 (asyncpg), Greenlet
+- **Database:** PostgreSQL 16 (Docker Compose with persistent volume `pgdata`, port 5433)
 - **Agent Orchestration:** LangGraph state machine with deterministic approval pauses
-- **AI Integration:** Provider-neutral adapter with offline mock support (no paid API key required for MVP)
-- **Testing:** pytest (backend), Vitest (frontend), Playwright (E2E)
+- **AI Integration:** Provider-neutral adapter with offline mock support (no paid API key required)
+- **Testing & Quality:** pytest + pytest-asyncio + httpx (backend), ESLint (frontend), Ruff (backend)
 
 ---
 
@@ -54,11 +54,11 @@
 
 | Requirement | Supported Version (Tested) | Notes |
 | :--- | :--- | :--- |
-| **Operating System** | macOS 14+ | Development & demonstration target |
-| **Python** | 3.14.7 | Virtual environments via `venv` |
+| **Operating System** | macOS 14+ | Tested on Darwin arm64 |
+| **Python** | 3.14.7 | Virtual environments via standard library `venv` |
 | **Node.js** | v26.9.0 | Frontend runtime |
-| **npm** | 12.2.0 | Frontend package management |
-| **Docker Compose** | v5.5.1 | Local PostgreSQL service |
+| **npm** | 12.2.0 | Frontend package manager |
+| **Docker Compose** | v5.5.1 | Manages local PostgreSQL 16 container |
 | **Git** | 2.55.0+ | Version control |
 
 ---
@@ -68,25 +68,25 @@
 ```text
 PERFORMai-360-Fresh/
 ├── apps/
-│   └── web/                    # Next.js frontend application (Phase 1+)
+│   └── web/                    # Next.js 16 frontend application
+│       ├── app/                # App Router (layout.tsx, page.tsx, globals.css)
+│       ├── components/         # Header, BackendHealthCard, PillarCards, Roadmap, Footer
+│       ├── package.json        # Frontend dependencies & scripts
+│       └── tsconfig.json
 ├── backend/
-│   ├── app/                    # FastAPI application and services (Phase 1+)
-│   │   ├── api/                # API route controllers
-│   │   ├── core/               # Configuration, security, logging
-│   │   ├── db/                 # Database engine and sessions
-│   │   ├── models/             # SQLAlchemy ORM models
-│   │   ├── schemas/            # Pydantic schemas
-│   │   ├── services/           # Business logic
-│   │   ├── agents/             # Agent nodes
-│   │   └── workflows/          # LangGraph orchestration
-│   ├── migrations/             # Alembic database migrations (Phase 2+)
-│   ├── tests/                  # Backend pytest test suite (Phase 1+)
-│   └── pyproject.toml
+│   ├── app/                    # FastAPI backend package
+│   │   ├── api/v1/             # API version 1 routers & endpoints (health.py)
+│   │   ├── core/               # Pydantic Settings configuration (config.py)
+│   │   ├── db/                 # Async SQLAlchemy engine & health probe (session.py)
+│   │   └── main.py             # FastAPI entry point, CORS & lifespan
+│   ├── tests/                  # Pytest automated test suite (test_health.py)
+│   ├── pyproject.toml          # Backend dependencies & tool configs (pytest, ruff)
+│   └── README.md
 ├── docs/
 │   ├── PRD.md                  # Comprehensive Product Requirements Document
 │   ├── ARCHITECTURE.md         # Detailed System Architecture Specification
 │   └── PHASE_LOG.md            # Chronological execution log & audit trail
-├── scripts/                    # Utility and synthetic data seeding scripts (Phase 2+)
+├── docker-compose.yml          # PostgreSQL 16 local service configuration
 ├── .env.example                # Configuration template with placeholders only
 ├── .gitignore                  # Git ignore rules for macOS, Python, Node, secrets
 └── README.md                   # Project overview and instructions
@@ -99,7 +99,7 @@ PERFORMai-360-Fresh/
 Development proceeds strictly in sequential phases:
 
 - [x] **Phase 0 — Repository and Planning Baseline** *(Completed)*
-- [ ] **Phase 1 — Application Skeleton & Local Developer Environment**
+- [x] **Phase 1 — Application Foundation & Local Developer Environment** *(Completed)*
 - [ ] **Phase 2 — Database, Migrations, and Authentication**
 - [ ] **Phase 3 — Core Review Workflow**
 - [ ] **Phase 4 — Evidence Processing & Retrieval**
@@ -115,26 +115,77 @@ Refer to [docs/PHASE_LOG.md](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-F
 
 ---
 
-## 6. Quick Start (Phase 0 Baseline)
+## 6. Developer Quick Start
 
-### 1. Clone & Configuration
+### 1. Database (PostgreSQL via Docker Compose)
 ```bash
-# Clone the repository
-git clone https://github.com/kaustubhkadam5555-alt/PERFORMai-360-Fresh.git
-cd PERFORMai-360-Fresh
+# Start PostgreSQL container in background
+docker compose up -d
 
-# Copy the environment template (placeholders only)
-cp .env.example .env
+# Check container status and health
+docker compose ps
+
+# View logs
+docker compose logs -f postgres
+
+# Stop database
+docker compose down
 ```
 
-### 2. Security & Secrets Disclaimer
-- Never commit `.env` or any production credentials to version control.
-- All secrets, API keys, and private certificates are strictly excluded via `.gitignore`.
-- Demos use synthetic data exclusively.
+### 2. Backend (FastAPI)
+```bash
+# Enter backend directory and create virtual environment
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Upgrade pip and install editable package with dev dependencies
+pip install --upgrade pip
+pip install -e ".[dev]"
+
+# Run automated tests
+pytest tests -v
+
+# Run code linter
+ruff check .
+
+# Start development server (runs on http://localhost:8000)
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### 3. Frontend (Next.js 16)
+```bash
+# Enter web application directory
+cd apps/web
+
+# Install dependencies (if not already installed)
+npm install
+
+# Run code linter
+npm run lint
+
+# Build production bundle
+npm run build
+
+# Start development server (runs on http://localhost:3000)
+npm run dev
+```
 
 ---
 
-## 7. Project Documentation
+## 7. Health & Readiness Probes
+
+| Method | Endpoint | Description | Return Status |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/health` | Liveness check (process alive) | `200 OK` |
+| `GET` | `/health/ready` | Readiness check (PostgreSQL reachable) | `200 OK` (connected) or `503` (down) |
+| `GET` | `/api/v1/health` | Mounted v1 liveness probe | `200 OK` |
+| `GET` | `/api/v1/health/ready`| Mounted v1 readiness probe | `200 OK` or `503` |
+| `GET` | `/docs` | Interactive Swagger API documentation | `200 OK` |
+
+---
+
+## 8. Project Documentation
 
 - **[Product Requirements Document (PRD)](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/docs/PRD.md)** — Full functional and non-functional requirements.
 - **[System Architecture](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/docs/ARCHITECTURE.md)** — Architectural design, agent workflow graph, and entity schemas.

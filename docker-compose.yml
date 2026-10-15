@@ -1,0 +1,38 @@
+# ==============================================================================
+# PERFORMai-360: Local Development Docker Compose Specification
+#
+# Services:
+#   - postgres: PostgreSQL 16 relational database with persistent volume
+#
+# Commands:
+#   - Start in background:   docker compose up -d
+#   - View container logs:   docker compose logs -f postgres
+#   - Check container status: docker compose ps
+#   - Stop containers:       docker compose down
+#   - Stop & wipe volume:    docker compose down -v
+# ==============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: performai360-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_password_placeholder}
+      POSTGRES_DB: ${POSTGRES_DB:-performai360}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-performai360}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+volumes:
+  pgdata:
+    name: performai360_pgdata
+    driver: local
