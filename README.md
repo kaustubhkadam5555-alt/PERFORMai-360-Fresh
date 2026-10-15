@@ -194,6 +194,18 @@ npm run dev
 | `GET` | `/api/v1/health/ready`| Mounted v1 readiness probe | `200 OK` or `503` |
 | `GET` | `/docs` | Interactive Swagger API documentation | `200 OK` |
 
+### LangGraph Multi-Agent Orchestration & Human-in-the-Loop Review (Phase 7)
+| Method | Endpoint | Description | Return Status |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/review-cycles/{id}/workflows` | Initiate or retrieve multi-agent orchestration workflow (runs 4 agents, pauses at approval boundary) | `200 OK` |
+| `POST` | `/api/v1/review-cycles/{id}/workflow-runs` | Alias endpoint returning 201 Created with full status and stage breakdown | `201 Created` |
+| `GET` | `/api/v1/review-cycles/{id}/workflows` | List all historical and active workflow runs for the review cycle | `200 OK` |
+| `GET` | `/api/v1/workflows/{id}` | Retrieve comprehensive status, current stage, 5-stage progress, synthesized draft, and available actions | `200 OK` or `404 Not Found` |
+| `POST` | `/api/v1/workflows/{id}/approve` | Authorized manager sign-off: approves review draft, marks status completed, logs immutable audit event | `200 OK` |
+| `POST` | `/api/v1/workflows/{id}/request-revision` | Request revisions with reviewer instructions: marks status revision_requested, logs audit event | `200 OK` |
+| `POST` | `/api/v1/workflows/{id}/resume` | Resume paused or interrupted workflow run from persisted PostgreSQL state | `200 OK` |
+| `POST` | `/api/v1/workflows/{id}/cancel` | Cancel an active, pending, or awaiting_approval workflow run | `200 OK` |
+
 ### Deterministic Bias & Evidence-Quality Audit Engine (Phase 6)
 | Method | Endpoint | Description | Return Status |
 | :--- | :--- | :--- | :--- |
