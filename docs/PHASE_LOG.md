@@ -366,7 +366,83 @@ The following runtime versions were verified directly on the local macOS host:
 - **AI Analysis & Scoring:** Phase 4 strictly scopes and retrieves evidence without automated AI synthesis, scoring, or agent loops (deferred to Phase 5–7).
 
 ### 5. Next Steps (Phase 5)
-Upon student review and approval:
-- Implement Single-Pass AI Analysis & Grounded Report Draft.
-- Implement provider-neutral LLM adapter (Mock, OpenAI, Anthropic, Ollama).
-- Implement structured contribution extraction grounded strictly in verified `evidence_ids`.
+- Implement Single-Pass AI Analysis & Grounded Report Draft. *(Completed)*
+
+---
+
+## Phase 5 — Agentic AI Review Analysis & Evidence-Grounded Performance Insights
+
+**Date:** 2026-10-16
+**Status:** Completed & Verified
+**Lead Agent:** Antigravity
+
+### 1. Phase Objectives & Scope
+- Build the first AI-assisted review analysis workflow converting authorized, retrieved evidence into traceable, balanced, human-reviewable performance observations.
+- Build bounded, authorized evidence context builder (`EvidenceContextBuilder`) with strict employee and review-cycle scoping, viewer role checks, cross-employee isolation, size limits (`LLM_MAX_CONTEXT_CHARS`), and prompt-injection defense with `<untrusted_evidence_document id="...">` XML tagging.
+- Implement vendor-neutral LLM provider abstraction (`LLMProvider`) supporting deterministic `MockLLMProvider` (default, zero-cost, offline), `OpenAILLMProvider`, `AnthropicLLMProvider`, `OllamaLLMProvider`, and `DisabledLLMProvider`.
+- Enforce strict grounding and citation validation (`validate_and_filter_citations`): all factual claims in strengths, improvement opportunities, and contradictions must cite verified, authorized `supporting_evidence_ids`. Hallucinated or cross-employee IDs are stripped and flagged with explicit limitations.
+- Implement statement sanitization removing non-printable control characters and unauthorized scoring directives.
+- Persist structured analysis results in existing PostgreSQL schema: `WorkflowRun` execution audit trail, atomic `Finding` records, and versioned draft `ReviewReport`.
+- Expose review analysis endpoints:
+  - `POST /api/v1/review-cycles/{cycle_id}/analysis`: Trigger evidence analysis with optional filters and bounded items.
+  - `POST /api/v1/review-cycles/{cycle_id}/analysis-runs`: Alias endpoint returning 201 Created.
+  - `GET /api/v1/review-cycles/{cycle_id}/analysis/{analysis_id}`: Retrieve analysis by ID with cross-cycle isolation.
+  - `GET /api/v1/review-cycles/{cycle_id}/analysis`: Retrieve latest analysis for the cycle.
+  - `GET /api/v1/review-cycles/{cycle_id}/findings`: Retrieve atomic findings (strengths, improvement opportunities, contradictions).
+- Frontend integration (`ReviewAnalysisCard.tsx`):
+  - Cycle selector from authorized records.
+  - Single-click analysis runner with loading and error states.
+  - Evidence completeness indicators (item counts, distribution, gaps).
+  - Grounded strengths with citation badges and excerpts.
+  - Improvement opportunities with constructive development suggestions.
+  - Contradictions & uncertainty section for conflicting evidence.
+  - Suggested open-ended discussion questions for manager-employee review sync.
+  - Prominent Human-in-the-Loop reviewer responsibility banner.
+  - Updated `PhaseRoadmap.tsx` marking Phase 5 as completed.
+- Governance boundary strictly enforced: Zero automated employee rankings, compensation adjustments, termination recommendations, or numerical scores.
+
+### 2. Deliverables & Modified Files
+| File Path | Action | Description |
+| :--- | :--- | :--- |
+| [`backend/app/core/config.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/core/config.py) | Modified | Added LLM provider settings (`LLM_PROVIDER`, API keys, models, timeouts, max chars, max items). |
+| [`backend/app/schemas/review_analysis.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/review_analysis.py) | Created | Pydantic v2 schemas: `StrengthItem`, `ImprovementOpportunity`, `ContradictionItem`, `DiscussionQuestion`, `EvidenceAnalysisSummary`, `ReviewAnalysisRequest`, `ReviewAnalysisResponse`, `FindingResponse`. |
+| [`backend/app/schemas/__init__.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/__init__.py) | Modified | Re-exported review analysis schemas. |
+| [`backend/app/ai/base.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/ai/base.py) | Created | Abstract `LLMProvider` interface, `LLMUnavailableError`, and `LLMValidationError`. |
+| [`backend/app/ai/prompts.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/ai/prompts.py) | Created | Versioned analysis system instructions (`v1.0`), prompt-injection defense directives, structured JSON schema, and user prompt builder. |
+| [`backend/app/ai/context_builder.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/ai/context_builder.py) | Created | Authorized, bounded evidence context builder with untrusted document isolation and completeness metrics integration. |
+| [`backend/app/ai/validators.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/ai/validators.py) | Created | Citation validation engine auditing evidence references, filtering hallucinations, and statement sanitization. |
+| [`backend/app/ai/provider.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/ai/provider.py) | Created | Concrete providers: `MockLLMProvider`, `OpenAILLMProvider`, `AnthropicLLMProvider`, `OllamaLLMProvider`, `DisabledLLMProvider`, and `get_llm_provider()` factory. |
+| [`backend/app/ai/orchestrator.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/ai/orchestrator.py) | Created | `AIOrchestrator` coordinating retrieval, generation, grounding audit, and schema construction. |
+| [`backend/app/ai/__init__.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/ai/__init__.py) | Created | Package exports for AI orchestration components. |
+| [`backend/app/repositories/review_analysis_repository.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/repositories/review_analysis_repository.py) | Created | Persistence layer for `WorkflowRun`, `Finding`, and `ReviewReport`. |
+| [`backend/app/services/review_analysis_service.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/services/review_analysis_service.py) | Created | Service layer coordinating execution, cycle authorization, findings extraction, and retrieval isolation. |
+| [`backend/app/api/v1/endpoints/review_analysis.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/endpoints/review_analysis.py) | Created | API endpoints for running analysis, retrieving analysis by ID, latest analysis, and atomic findings. |
+| [`backend/app/api/v1/router.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/router.py) | Modified | Registered `review_analysis.router` in API v1 router. |
+| [`backend/tests/test_ai_context_builder.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_ai_context_builder.py) | Created | 3 unit tests for context building, cycle scoping, bounding/truncation, and non-existent cycles. |
+| [`backend/tests/test_ai_provider.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_ai_provider.py) | Created | 4 unit tests for mock provider, disabled provider, factory selection, and credential safety. |
+| [`backend/tests/test_ai_validators.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_ai_validators.py) | Created | 3 unit tests for statement sanitization, valid citations, and hallucinated citation filtering. |
+| [`backend/tests/test_review_analysis_api.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_review_analysis_api.py) | Created | 6 integration tests for end-to-end analysis, alias endpoints, insufficient evidence, cross-cycle isolation, unauthorized user blocking, and disabled provider handling. |
+| [`apps/web/components/ReviewAnalysisCard.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/components/ReviewAnalysisCard.tsx) | Created | Frontend card for review cycle analysis, grounded evidence citations, development areas, discussion questions, and human-in-the-loop notice. |
+| [`apps/web/app/page.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/app/page.tsx) | Modified | Mounted `ReviewAnalysisCard` on dashboard and updated hero badge. |
+| [`apps/web/components/PhaseRoadmap.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/components/PhaseRoadmap.tsx) | Modified | Marked Phase 5 completed. |
+| [`backend/README.md`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/README.md) | Modified | Documented AI module, review analysis endpoints, and test suite count. |
+| [`README.md`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/README.md) | Modified | Documented Phase 5 capabilities and API endpoints. |
+| [`docs/ARCHITECTURE.md`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/docs/ARCHITECTURE.md) | Modified | Updated document status to Phase 5 completed. |
+
+### 3. Verification Commands & Actual Results
+| Check | Command Executed | Actual Result |
+| :--- | :--- | :--- |
+| **Backend Unit & Integration Tests** | `backend/.venv/bin/pytest backend/tests -v` | **80 passed in 1.18s** (100% pass) |
+| **Backend Lint & Format** | `backend/.venv/bin/ruff check backend && backend/.venv/bin/ruff format backend --check` | **All checks passed!** 87 files clean |
+| **Alembic Head Verification** | `cd backend && .venv/bin/alembic current && .venv/bin/alembic heads` | `8884fdc13f66 (head)` matches current DB state |
+| **Frontend Linting** | `cd apps/web && npm run lint` | **0 errors, 0 warnings** (ESLint) |
+| **Frontend Production Build** | `cd apps/web && npm run build` | **Compiled successfully in 271ms** (Turbopack) |
+| **Live Health Probes** | `curl http://127.0.0.1:8000/health/ready` | **`{"status":"ready","dependencies":{"database":{"status":"ready"},"llm_provider":{"provider":"mock"}}}`** |
+
+### 4. Known Limitations & Deferred Work
+- **Multi-Agent Iterative Loops:** Phase 5 provides single-pass evidence review analysis. Multi-agent debate, feedback reconciliation loops, and bias audit state machines belong to Phase 6 & 7.
+- **VCS API Webhooks:** Live GitHub/GitLab webhook receivers remain deferred; all evidence continues to be ingested via verified document uploads and API registration.
+
+### 5. Next Steps (Phase 6)
+Upon user review and approval:
+- Implement Deterministic Bias & Evidence-Quality Audit Engine (5 core audit rules: recency bias, stakeholder imbalance, ungrounded claims, sentiment anomalies, and coverage gaps).

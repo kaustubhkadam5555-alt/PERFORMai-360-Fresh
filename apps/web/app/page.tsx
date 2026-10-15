@@ -3,6 +3,7 @@
 import React from "react";
 import { Header } from "../components/Header";
 import { BackendHealthCard } from "../components/BackendHealthCard";
+import { ReviewAnalysisCard } from "../components/ReviewAnalysisCard";
 import { PillarCards } from "../components/PillarCards";
 import { PhaseRoadmap } from "../components/PhaseRoadmap";
 import { Footer } from "../components/Footer";
@@ -22,8 +23,8 @@ export default function Home() {
             <div className="text-center">
               {/* Badge */}
               <div className="inline-flex items-center space-x-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3.5 py-1.5 text-xs font-semibold text-indigo-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
-                <span>Phase 1 — Local Application Foundation Live</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Phase 5 — Evidence-Grounded AI Analysis Live</span>
               </div>
 
               {/* Headline */}
@@ -61,6 +62,9 @@ export default function Home() {
             <div className="mt-14">
               <BackendHealthCard />
             </div>
+
+            {/* Phase 5: AI Review Analysis Interface */}
+            <ReviewAnalysisCard />
 
             {/* Core Architectural Pillars */}
             <PillarCards />

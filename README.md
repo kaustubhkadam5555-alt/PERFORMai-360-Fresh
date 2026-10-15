@@ -194,6 +194,15 @@ npm run dev
 | `GET` | `/api/v1/health/ready`| Mounted v1 readiness probe | `200 OK` or `503` |
 | `GET` | `/docs` | Interactive Swagger API documentation | `200 OK` |
 
+### Review Analysis & Grounded Performance Insights (Phase 5)
+| Method | Endpoint | Description | Return Status |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/review-cycles/{id}/analysis` | Execute evidence-grounded review analysis, persist findings & draft report | `200 OK` |
+| `POST` | `/api/v1/review-cycles/{id}/analysis-runs` | Alias endpoint returning 201 Created | `201 Created` |
+| `GET` | `/api/v1/review-cycles/{id}/analysis/{analysis_id}` | Retrieve specific analysis by ID with cross-cycle isolation checks | `200 OK` or `404 Not Found` |
+| `GET` | `/api/v1/review-cycles/{id}/analysis` | Retrieve latest analysis for the review cycle | `200 OK` or `404 Not Found` |
+| `GET` | `/api/v1/review-cycles/{id}/findings` | Retrieve atomic findings (strengths, improvement opportunities, contradictions) | `200 OK` |
+
 ### Core Review Workflow (Phase 3)
 | Method | Endpoint | Description | Return Status |
 | :--- | :--- | :--- | :--- |

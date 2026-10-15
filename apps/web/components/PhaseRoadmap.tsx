@@ -44,7 +44,7 @@ export function PhaseRoadmap() {
     {
       phase: "Phase 5",
       name: "Single-Pass AI Analysis",
-      status: "upcoming",
+      status: "completed",
       summary: "Provider-neutral adapter, structured extraction, source-ID grounding validation.",
     },
     {

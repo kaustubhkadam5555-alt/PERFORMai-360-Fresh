@@ -9,6 +9,13 @@ FastAPI application providing REST endpoints, evaluation workflow orchestration,
 ```text
 backend/
 ├── app/
+│   ├── ai/                           # AI orchestration, context builder, providers, and citation validators
+│   │   ├── base.py                   # LLMProvider abstract interface & exceptions
+│   │   ├── context_builder.py        # Authorized bounded evidence context builder
+│   │   ├── orchestrator.py           # AIOrchestrator pipeline coordinator
+│   │   ├── prompts.py                # System instructions, prompt injection defenses, JSON schemas
+│   │   ├── provider.py               # Mock, OpenAI, Anthropic, Ollama & Disabled providers
+│   │   └── validators.py             # Citation validation, hallucination filter, statement sanitization
 │   ├── api/
 │   │   └── v1/
 │   │       ├── endpoints/
@@ -18,21 +25,22 @@ backend/
 │   │       │   ├── review_cycles.py  # Review cycle workflow & nested endpoints
 │   │       │   ├── feedback.py       # 360-degree feedback management
 │   │       │   ├── goals.py          # Goal tracking & progress management
-│   │       │   └── evidence.py       # Evidence upload, retrieval & access policy management
+│   │       │   ├── evidence.py       # Evidence upload, retrieval & access policy management
+│   │       │   └── review_analysis.py # Evidence-grounded AI review analysis endpoints
 │   │       └── router.py             # API v1 router aggregator
 │   ├── core/
-│   │   └── config.py                 # Pydantic Settings configuration (upload limits, storage dir)
+│   │   └── config.py                 # Pydantic Settings configuration (LLM, upload limits, storage dir)
 │   ├── db/
 │   │   ├── base.py                   # SQLAlchemy 2.0 Base, naming conventions & mixins
 │   │   └── session.py                # Async SQLAlchemy engine, session generator & health probe
 │   ├── models/                       # SQLAlchemy 2.0 ORM domain entities (13 PRD models)
 │   ├── parsers/                      # Safe document parsers (PDF, DOCX, TXT, CSV) & magic signature validation
 │   ├── schemas/                      # Pydantic v2 validation & serialization schemas
-│   ├── repositories/                 # Repository layer (DB queries & mutations)
-│   ├── services/                     # Business logic, lifecycle, parsing & evidence services
+│   ├── repositories/                 # Repository layer (DB queries, mutations, findings & report persistence)
+│   ├── services/                     # Business logic, lifecycle, parsing, evidence & review analysis services
 │   └── main.py                       # FastAPI application entry point, CORS & lifespan
 ├── migrations/                       # Alembic async migration scripts & env.py
-├── tests/                            # Pytest test suite (64 automated tests, 100% pass)
+├── tests/                            # Pytest test suite (80 automated tests, 100% pass)
 ├── alembic.ini                       # Alembic database migration configuration
 └── pyproject.toml                    # Dependency specifications & tool configs
 ```
@@ -79,10 +87,19 @@ ruff format . --check
 | Method | Endpoint | Description | Expected Status |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/health` | Liveness check (process up) | `200 OK` |
-| `GET` | `/health/ready` | Readiness check (PostgreSQL reachable) | `200 OK` (healthy) or `503` |
+| `GET` | `/health/ready` | Readiness check (PostgreSQL reachable, LLM provider ready) | `200 OK` (healthy) or `503` |
 | `GET` | `/api/v1/health` | Mounted v1 liveness check | `200 OK` |
 | `GET` | `/api/v1/health/ready` | Mounted v1 readiness check | `200 OK` or `503` |
 | `GET` | `/docs` | Interactive Swagger API docs | `200 OK` |
+
+### Review Analysis & Grounded Performance Insights (Phase 5)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/v1/review-cycles/{cycle_id}/analysis` | Execute evidence-grounded review analysis, persist findings & draft report |
+| `POST` | `/api/v1/review-cycles/{cycle_id}/analysis-runs` | Alias endpoint returning `201 Created` |
+| `GET` | `/api/v1/review-cycles/{cycle_id}/analysis/{analysis_id}` | Retrieve specific analysis by ID with cross-cycle isolation checks |
+| `GET` | `/api/v1/review-cycles/{cycle_id}/analysis` | Retrieve latest analysis for the review cycle |
+| `GET` | `/api/v1/review-cycles/{cycle_id}/findings` | Retrieve atomic findings (strengths, improvement opportunities, contradictions) |
 
 ### Review Cycle Workflow (Phase 3)
 | Method | Endpoint | Description |
@@ -141,3 +158,15 @@ ruff format . --check
 | `GET` | `/api/v1/teams/{id}` | Retrieve team by ID |
 | `POST` | `/api/v1/teams/{id}/members` | Add member to team |
 | `GET` | `/api/v1/teams/{id}/members` | List team memberships |
+
+---
+
+## 4. LLM Provider Configuration
+
+The backend supports multiple LLM providers configured via environment variables:
+
+- `LLM_PROVIDER="mock"`: Deterministic in-memory provider. Synthesizes findings strictly from authorized evidence items. Zero API costs, runs in <10ms, perfect for local development and CI testing.
+- `LLM_PROVIDER="openai"`: Uses `OPENAI_API_KEY` with configured `OPENAI_MODEL` (default: `gpt-4o-mini`).
+- `LLM_PROVIDER="anthropic"`: Uses `ANTHROPIC_API_KEY` with configured `ANTHROPIC_MODEL` (default: `claude-3-5-sonnet-20241022`).
+- `LLM_PROVIDER="ollama"`: Local offline inference via `OLLAMA_BASE_URL` (default: `http://localhost:11434`) and `OLLAMA_MODEL`.
+- `LLM_PROVIDER="none"`: Disabled mode. Reports AI analysis unavailable safely with HTTP 503 or structured failed response without crashing.

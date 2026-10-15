@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Optional, Union
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -46,8 +46,18 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres_password_placeholder@localhost:5433/performai360"
     SYNC_DATABASE_URL: str = "postgresql://postgres:postgres_password_placeholder@localhost:5433/performai360"
 
-    # LLM Settings
-    LLM_PROVIDER: str = "mock"
+    # LLM Settings (Phase 5)
+    LLM_PROVIDER: str = "mock"  # "mock", "openai", "anthropic", "ollama", "none"
+    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_BASE_URL: Optional[str] = None
+    ANTHROPIC_API_KEY: Optional[str] = None
+    ANTHROPIC_MODEL: str = "claude-3-5-sonnet-20241022"
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "llama3"
+    LLM_TIMEOUT_SECONDS: int = 30
+    LLM_MAX_CONTEXT_CHARS: int = 40_000
+    LLM_MAX_EVIDENCE_ITEMS: int = 50
 
     # Evidence Upload & Processing Settings
     UPLOAD_DIR: str = "uploads"

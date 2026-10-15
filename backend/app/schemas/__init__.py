@@ -17,6 +17,16 @@ from app.schemas.goal import (
     GoalResponse,
     GoalUpdate,
 )
+from app.schemas.review_analysis import (
+    ContradictionItem,
+    DiscussionQuestion,
+    EvidenceAnalysisSummary,
+    FindingResponse,
+    ImprovementOpportunity,
+    ReviewAnalysisRequest,
+    ReviewAnalysisResponse,
+    StrengthItem,
+)
 from app.schemas.review_cycle import (
     ReviewCycleBase,
     ReviewCycleCreate,
@@ -61,4 +71,12 @@ __all__ = [
     "EvidenceUpdate",
     "EvidenceResponse",
     "EvidenceCompletenessResponse",
+    "StrengthItem",
+    "ImprovementOpportunity",
+    "ContradictionItem",
+    "DiscussionQuestion",
+    "EvidenceAnalysisSummary",
+    "ReviewAnalysisRequest",
+    "ReviewAnalysisResponse",
+    "FindingResponse",
 ]
