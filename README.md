@@ -111,8 +111,8 @@ Development proceeds strictly in sequential phases:
 - [x] **Phase 4 — Evidence Processing & Retrieval** *(Completed)*
 - [x] **Phase 5 — Single-Pass AI Analysis & Grounded Report Draft** *(Completed)*
 - [x] **Phase 6 — Bias & Evidence-Quality Audit Engine** *(Completed)*
-- [ ] **Phase 7 — LangGraph Multi-Agent Orchestration**
-- [ ] **Phase 8 — Human Approval, Report Versions, & Governance**
+- [x] **Phase 7 — LangGraph Multi-Agent Orchestration** *(Completed)*
+- [x] **Phase 8 — Human Approval, Report Versions, & Governance** *(Completed)*
 - [ ] **Phase 9 — Dashboard Polish, Accessibility, & Export**
 - [ ] **Phase 10 — Comprehensive Testing & Security Review**
 - [ ] **Phase 11 — Final Documentation & Demonstration Readiness**
