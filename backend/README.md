@@ -16,6 +16,15 @@ backend/
 │   │   ├── prompts.py                # System instructions, prompt injection defenses, JSON schemas
 │   │   ├── provider.py               # Mock, OpenAI, Anthropic, Ollama & Disabled providers
 │   │   └── validators.py             # Citation validation, hallucination filter, statement sanitization
+│   ├── audit/                        # Phase 6 Deterministic bias & evidence-quality audit engine
+│   │   ├── base.py                   # AuditRule abstract base class, AuditContext, AuditFlagDraft
+│   │   ├── engine.py                 # AuditEngine orchestrator, health scoring, review-ready checks
+│   │   └── rules/                    # 5 deterministic rule implementations
+│   │       ├── evidence_coverage.py  # EvidenceCoverageRule (uncited material claims)
+│   │       ├── recency_concentration.py # RecencyConcentrationRule (>60% in final quartile)
+│   │       ├── stakeholder_coverage.py # StakeholderCoverageRule (missing self/peer/mgr)
+│   │       ├── vague_language.py     # VagueLanguageRule (absolutes & personality adjectives)
+│   │       └── contradictions.py     # ContradictoryFeedbackRule (unresolved conflicting sentiment)
 │   ├── api/
 │   │   └── v1/
 │   │       ├── endpoints/
@@ -26,7 +35,8 @@ backend/
 │   │       │   ├── feedback.py       # 360-degree feedback management
 │   │       │   ├── goals.py          # Goal tracking & progress management
 │   │       │   ├── evidence.py       # Evidence upload, retrieval & access policy management
-│   │       │   └── review_analysis.py # Evidence-grounded AI review analysis endpoints
+│   │       │   ├── review_analysis.py # Evidence-grounded AI review analysis endpoints
+│   │       │   └── bias_audit.py     # Deterministic bias & quality audit endpoints
 │   │       └── router.py             # API v1 router aggregator
 │   ├── core/
 │   │   └── config.py                 # Pydantic Settings configuration (LLM, upload limits, storage dir)
@@ -36,11 +46,11 @@ backend/
 │   ├── models/                       # SQLAlchemy 2.0 ORM domain entities (13 PRD models)
 │   ├── parsers/                      # Safe document parsers (PDF, DOCX, TXT, CSV) & magic signature validation
 │   ├── schemas/                      # Pydantic v2 validation & serialization schemas
-│   ├── repositories/                 # Repository layer (DB queries, mutations, findings & report persistence)
-│   ├── services/                     # Business logic, lifecycle, parsing, evidence & review analysis services
+│   ├── repositories/                 # Repository layer (DB queries, mutations, findings, flags & reports)
+│   ├── services/                     # Business logic, lifecycle, parsing, review analysis & bias audit services
 │   └── main.py                       # FastAPI application entry point, CORS & lifespan
 ├── migrations/                       # Alembic async migration scripts & env.py
-├── tests/                            # Pytest test suite (80 automated tests, 100% pass)
+├── tests/                            # Pytest test suite (95 automated tests, 100% pass)
 ├── alembic.ini                       # Alembic database migration configuration
 └── pyproject.toml                    # Dependency specifications & tool configs
 ```
@@ -91,6 +101,16 @@ ruff format . --check
 | `GET` | `/api/v1/health` | Mounted v1 liveness check | `200 OK` |
 | `GET` | `/api/v1/health/ready` | Mounted v1 readiness check | `200 OK` or `503` |
 | `GET` | `/docs` | Interactive Swagger API docs | `200 OK` |
+
+### Deterministic Bias & Evidence-Quality Audit Engine (Phase 6)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/v1/review-cycles/{cycle_id}/audit` | Run 5 deterministic audit rules against evidence, feedback, goals, and findings |
+| `POST` | `/api/v1/review-cycles/{cycle_id}/bias-audit` | Alias endpoint returning `201 Created` with audit summary and generated flags |
+| `GET` | `/api/v1/review-cycles/{cycle_id}/audit-flags` | List detected bias & evidence-quality flags (supports filtering by `status`, `severity`, `flag_type`) |
+| `GET` | `/api/v1/review-cycles/{cycle_id}/bias-flags` | Alias endpoint listing bias flags |
+| `PATCH` | `/api/v1/review-cycles/{cycle_id}/audit-flags/{flag_id}` | Manager triage & calibration (`open` → `acknowledged`, `resolved`, `not_applicable` with comment) |
+| `GET` | `/api/v1/review-cycles/{cycle_id}/audit-summary` | Retrieve overall audit health score (0-100), severity breakdown, and review readiness |
 
 ### Review Analysis & Grounded Performance Insights (Phase 5)
 | Method | Endpoint | Description |

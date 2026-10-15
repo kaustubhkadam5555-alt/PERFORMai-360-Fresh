@@ -1,3 +1,11 @@
+from app.schemas.bias_flag import (
+    AuditExecutionRequest,
+    AuditSummaryResponse,
+    BiasFlagBase,
+    BiasFlagCreate,
+    BiasFlagResponse,
+    BiasFlagUpdate,
+)
 from app.schemas.evidence import (
     EvidenceBase,
     EvidenceCompletenessResponse,
@@ -79,4 +87,10 @@ __all__ = [
     "ReviewAnalysisRequest",
     "ReviewAnalysisResponse",
     "FindingResponse",
+    "BiasFlagBase",
+    "BiasFlagCreate",
+    "BiasFlagUpdate",
+    "BiasFlagResponse",
+    "AuditExecutionRequest",
+    "AuditSummaryResponse",
 ]

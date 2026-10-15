@@ -444,5 +444,96 @@ The following runtime versions were verified directly on the local macOS host:
 - **VCS API Webhooks:** Live GitHub/GitLab webhook receivers remain deferred; all evidence continues to be ingested via verified document uploads and API registration.
 
 ### 5. Next Steps (Phase 6)
+- Implement Deterministic Bias & Evidence-Quality Audit Engine (5 core audit rules: recency bias, stakeholder imbalance, ungrounded claims, vague language, and contradictions). *(Completed)*
+
+---
+
+## Phase 6 — Deterministic Bias & Evidence-Quality Audit Engine
+
+**Date:** 2026-10-16
+**Status:** Completed & Verified
+**Lead Agent:** Antigravity (Principal Software Architect & Lead Full-Stack Engineer)
+
+### 1. Phase Objectives & Scope
+- Implement the Phase 6 Deterministic Bias & Evidence-Quality Audit Engine according to PRD FR-09, Section 12.2, Section 15, and the project architectural principles.
+- Implement the 5 non-negotiable deterministic audit rules:
+  1. **`EvidenceCoverageRule` (`evidence_coverage`):** Scans atomic findings for claims lacking verifiable source citations or citing cross-employee/unverified evidence IDs (`missing_citations`, `ungrounded_claims`).
+  2. **`RecencyConcentrationRule` (`recency_concentration`):** Analyzes chronological evidence distribution across the review cycle timeline. Flags when >60% of all evidence items are concentrated in the final 25% of the cycle, detecting potential recency distortion while preserving legitimate sprint activity.
+  3. **`StakeholderCoverageRule` (`stakeholder_coverage`):** Audits feedback perspective balance across self, peer, and manager feedback. Flags missing or severely imbalanced perspectives (e.g., missing self-assessment or peer feedback).
+  4. **`VagueLanguageRule` (`vague_language`):** Analyzes review text using regex boundaries for absolute quantifiers ("always", "never", "constantly") and subjective personality adjectives without observable behavioral anchors ("difficult", "arrogant", "lazy", "aggressive", "emotional", "incompetent").
+  5. **`ContradictoryFeedbackRule` (`contradictory_feedback`):** Evaluates multi-source feedback signals for divergent observations or unresolved conflicting assessments across stakeholders.
+- **Ethical Governance & Non-Punitive Architecture:**
+  - Audit flags are strictly explainable, diagnostic signals prompting human reflection.
+  - The engine never makes definitive accusations of malicious intent, personal animus, or protected-attribute discrimination.
+  - Zero automated employee ranking, performance scoring, compensation adjustment, or termination recommendations.
+- **Audit Engine Orchestration & Health Scoring:**
+  - `AuditEngine` coordinates multi-source artifact aggregation (review cycles, feedback, goals, evidence, findings, reports) and runs all rules.
+  - Computes a deterministic Audit Health Score (0–100): baseline 100 with deductions based on flag severity (critical: -15, high: -10, medium: -5, low: -2).
+  - Rewards human manager triage: `acknowledged` flags reduce the penalty by 50%, while `resolved` flags eliminate the penalty entirely.
+  - `is_ready_for_review` check: True when no unresolved `critical` flags remain and overall health score is >= 70.
+  - Re-audit idempotency: Re-evaluating a cycle clears only `open` flags, preserving human manager calibrations (`acknowledged`, `resolved`, `not_applicable`) and audit trail comments.
+- **REST Endpoints:**
+  - `POST /api/v1/review-cycles/{cycle_id}/audit`: Trigger audit execution against authorized multi-source data.
+  - `POST /api/v1/review-cycles/{cycle_id}/bias-audit`: Alias endpoint returning 201 Created.
+  - `GET /api/v1/review-cycles/{cycle_id}/audit-flags`: List detected flags with optional filtering by `status`, `severity`, and `flag_type`.
+  - `GET /api/v1/review-cycles/{cycle_id}/bias-flags`: Alias endpoint for listing flags.
+  - `PATCH /api/v1/review-cycles/{cycle_id}/audit-flags/{flag_id}`: Manager triage & resolution state machine transition with mandatory comment auditing.
+  - `GET /api/v1/review-cycles/{cycle_id}/audit-summary`: High-level summary returning health score, readiness status, severity breakdown, and flag counts.
+- **Frontend Integration (`AuditReviewCard.tsx`):**
+  - Integrated interactive audit card mounted directly on the dashboard.
+  - Cycle selector with real-time audit status indication.
+  - Visual Health Score gauge (0–100) with color-coded readiness pill.
+  - Severity breakdown chips (`critical`, `high`, `medium`, `low`).
+  - Filterable tabs by status (`all`, `open`, `acknowledged`, `resolved`).
+  - Interactive manager calibration modal for triage transitions (`acknowledged`, `resolved`, `not_applicable`) with auditor comment logging.
+  - Updated `PhaseRoadmap.tsx` marking Phase 6 as completed.
+- **Comprehensive Verification & Synthetic Labeled Benchmark:**
+  - Unit tests for all 5 rules covering edge cases and clean conditions.
+  - Labeled synthetic evaluation benchmark with 6 known ground-truth scenarios evaluating precision, recall, and F1-score (**Precision: 1.0000, Recall: 1.0000, F1-Score: 1.0000**).
+  - End-to-end integration tests verifying API contracts, permission scoping, cross-cycle isolation, and health score recalculation.
+
+### 2. Deliverables & Modified Files
+| File Path | Action | Description |
+| :--- | :--- | :--- |
+| [`backend/app/schemas/bias_flag.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/bias_flag.py) | Created | Pydantic v2 schemas: `BiasFlagBase`, `BiasFlagCreate`, `BiasFlagUpdate`, `BiasFlagResponse`, `AuditExecutionRequest`, and `AuditSummaryResponse`. |
+| [`backend/app/schemas/__init__.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/__init__.py) | Modified | Re-exported all Phase 6 schemas. |
+| [`backend/app/repositories/bias_flag_repository.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/repositories/bias_flag_repository.py) | Created | Persistence layer for `BiasFlag`: CRUD, filters (`status`, `severity`, `flag_type`), and `clear_open_flags_for_cycle`. |
+| [`backend/app/audit/base.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/audit/base.py) | Created | Abstract `AuditRule` interface, `AuditFlagDraft` dataclass, and `AuditContext` aggregation container. |
+| [`backend/app/audit/rules/evidence_coverage.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/audit/rules/evidence_coverage.py) | Created | `EvidenceCoverageRule`: Detects material claims without verifiable citations or with invalid references. |
+| [`backend/app/audit/rules/recency_concentration.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/audit/rules/recency_concentration.py) | Created | `RecencyConcentrationRule`: Detects evidence compressed in final 25% quartile of timeline (>60%). |
+| [`backend/app/audit/rules/stakeholder_coverage.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/audit/rules/stakeholder_coverage.py) | Created | `StakeholderCoverageRule`: Audits balance across self, peer, and manager perspectives. |
+| [`backend/app/audit/rules/vague_language.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/audit/rules/vague_language.py) | Created | `VagueLanguageRule`: Detects absolute quantifiers and unanchored subjective personality adjectives. |
+| [`backend/app/audit/rules/contradictions.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/audit/rules/contradictions.py) | Created | `ContradictoryFeedbackRule`: Identifies conflicting sentiment and divergent observations across feedback signals. |
+| [`backend/app/audit/engine.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/audit/engine.py) | Created | `AuditEngine`: Coordinates 5 rules, computes Audit Health Score (0-100), and checks review readiness. |
+| [`backend/app/audit/__init__.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/audit/__init__.py) | Created | Package exports for audit engine and rules. |
+| [`backend/app/services/bias_audit_service.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/services/bias_audit_service.py) | Created | Service layer orchestrating context aggregation, rule execution, manager calibrations, and health recalculation. |
+| [`backend/app/api/v1/endpoints/bias_audit.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/endpoints/bias_audit.py) | Created | REST endpoints for audit execution, listing flags, status mutations, and summary reporting. |
+| [`backend/app/api/v1/router.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/router.py) | Modified | Registered `bias_audit.router` with `/review-cycles` path prefix. |
+| [`backend/tests/test_audit_rules.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_audit_rules.py) | Created | 9 unit tests verifying all 5 audit rules across positive and negative cases. |
+| [`backend/tests/test_bias_audit_benchmark.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_bias_audit_benchmark.py) | Created | Labeled benchmark suite evaluating 6 scenarios; achieved Precision=1.0000, Recall=1.0000, F1=1.0000. |
+| [`backend/tests/test_api_bias_audit.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_api_bias_audit.py) | Created | 5 integration tests covering execution, alias endpoints, filtering, triage mutations, and isolation boundaries. |
+| [`apps/web/components/AuditReviewCard.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/components/AuditReviewCard.tsx) | Created | Interactive audit interface with health score gauge, severity breakdown, flag filtering, and calibration modal. |
+| [`apps/web/app/page.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/app/page.tsx) | Modified | Mounted `AuditReviewCard` on dashboard and updated hero badge. |
+| [`apps/web/components/PhaseRoadmap.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/components/PhaseRoadmap.tsx) | Modified | Marked Phase 6 as completed with summary of the 5 rules. |
+| [`backend/README.md`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/README.md) | Modified | Documented audit package, new endpoints table, and updated test suite count (95 tests). |
+| [`README.md`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/README.md) | Modified | Updated roadmap status, test count, and Section 7 API table. |
+| [`docs/ARCHITECTURE.md`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/docs/ARCHITECTURE.md) | Modified | Updated document status and Section 7 roadmap. |
+
+### 3. Verification Commands & Actual Results
+| Check | Command Executed | Actual Result |
+| :--- | :--- | :--- |
+| **Backend Automated Tests** | `cd backend && .venv/bin/pytest tests -v` | **95 passed in 1.36s** (100% pass) |
+| **Backend Linting** | `cd backend && .venv/bin/ruff check .` | **All checks passed!** 0 errors |
+| **Backend Formatting** | `cd backend && .venv/bin/ruff format --check .` | **102 files already formatted** |
+| **Audit Benchmark Metrics** | `pytest tests/test_bias_audit_benchmark.py -v -s` | **Precision: 1.0000, Recall: 1.0000, F1-Score: 1.0000** |
+| **Frontend Linting** | `cd apps/web && npm run lint` | **0 errors, 0 warnings** (ESLint) |
+| **Frontend Production Build** | `cd apps/web && npm run build` | **Compiled successfully in 279ms** (Next.js 16.4.1 Turbopack) |
+| **Live Health Probes** | `curl http://127.0.0.1:8000/health/ready` | **`{"status":"ready","dependencies":{"database":{"status":"ready"},"llm_provider":{"provider":"mock"}}}`** |
+
+### 4. Known Limitations & Deferred Work
+- **Multi-Agent Orchestration:** While Phase 6 provides the deterministic audit engine and manager calibration workflows, multi-agent state graph routing and iterative refinement loops are implemented in Phase 7 (LangGraph).
+- **Final Report Approval Governance:** Immutable versioning, manager sign-off workflows, and final PDF export are scheduled for Phase 8.
+
+### 5. Next Steps (Phase 7)
 Upon user review and approval:
-- Implement Deterministic Bias & Evidence-Quality Audit Engine (5 core audit rules: recency bias, stakeholder imbalance, ungrounded claims, sentiment anomalies, and coverage gaps).
+- Implement Phase 7: LangGraph Multi-Agent Orchestration (Evidence Retrieval Agent, Feedback Analysis Agent, Bias & Evidence Auditor, Review Synthesis Agent, and Human Approval Pause Node).

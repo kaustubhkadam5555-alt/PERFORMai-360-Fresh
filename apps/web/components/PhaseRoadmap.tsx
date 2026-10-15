@@ -50,8 +50,8 @@ export function PhaseRoadmap() {
     {
       phase: "Phase 6",
       name: "Bias & Evidence-Quality Audit",
-      status: "upcoming",
-      summary: "Deterministic checks: recency concentration, stakeholder balance, ungrounded claims.",
+      status: "completed",
+      summary: "Deterministic checks: recency concentration, stakeholder balance, ungrounded claims, vague language, contradictions.",
     },
     {
       phase: "Phase 7",

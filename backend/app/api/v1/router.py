@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    bias_audit,
     evidence,
     feedback,
     goals,
@@ -28,3 +29,6 @@ api_v1_router.include_router(evidence.router)
 
 # Mount AI review analysis endpoints (Phase 5)
 api_v1_router.include_router(review_analysis.router)
+
+# Mount Bias & Evidence-Quality Audit endpoints (Phase 6)
+api_v1_router.include_router(bias_audit.router)

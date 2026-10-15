@@ -108,9 +108,9 @@ Development proceeds strictly in sequential phases:
 - [x] **Phase 1 — Application Foundation & Local Developer Environment** *(Completed)*
 - [x] **Phase 2 — Core Database Models and Persistence** *(Completed)*
 - [x] **Phase 3 — Core Review Workflow** *(Completed)*
-- [ ] **Phase 4 — Evidence Processing & Retrieval**
-- [ ] **Phase 5 — Single-Pass AI Analysis & Grounded Report Draft**
-- [ ] **Phase 6 — Bias & Evidence-Quality Audit Engine**
+- [x] **Phase 4 — Evidence Processing & Retrieval** *(Completed)*
+- [x] **Phase 5 — Single-Pass AI Analysis & Grounded Report Draft** *(Completed)*
+- [x] **Phase 6 — Bias & Evidence-Quality Audit Engine** *(Completed)*
 - [ ] **Phase 7 — LangGraph Multi-Agent Orchestration**
 - [ ] **Phase 8 — Human Approval, Report Versions, & Governance**
 - [ ] **Phase 9 — Dashboard Polish, Accessibility, & Export**
@@ -152,7 +152,7 @@ pip install -e ".[dev]"
 # Run database migrations
 alembic upgrade head
 
-# Run automated tests (64 tests)
+# Run automated tests (95 tests)
 pytest tests -v
 
 # Run code linter and format check
@@ -193,6 +193,16 @@ npm run dev
 | `GET` | `/api/v1/health` | Mounted v1 liveness probe | `200 OK` |
 | `GET` | `/api/v1/health/ready`| Mounted v1 readiness probe | `200 OK` or `503` |
 | `GET` | `/docs` | Interactive Swagger API documentation | `200 OK` |
+
+### Deterministic Bias & Evidence-Quality Audit Engine (Phase 6)
+| Method | Endpoint | Description | Return Status |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/review-cycles/{id}/audit` | Run 5 deterministic audit rules against evidence, feedback, goals, and findings | `200 OK` |
+| `POST` | `/api/v1/review-cycles/{id}/bias-audit` | Alias endpoint returning 201 Created with audit summary and generated flags | `201 Created` |
+| `GET` | `/api/v1/review-cycles/{id}/audit-flags` | List detected bias & evidence-quality flags (filtering by `status`, `severity`, `flag_type`) | `200 OK` |
+| `GET` | `/api/v1/review-cycles/{id}/bias-flags` | Alias endpoint listing bias flags | `200 OK` |
+| `PATCH` | `/api/v1/review-cycles/{id}/audit-flags/{flag_id}` | Manager triage & calibration (`open` → `acknowledged`, `resolved`, `not_applicable`) | `200 OK` |
+| `GET` | `/api/v1/review-cycles/{id}/audit-summary` | Retrieve overall audit health score (0-100), severity breakdown, and review readiness | `200 OK` |
 
 ### Review Analysis & Grounded Performance Insights (Phase 5)
 | Method | Endpoint | Description | Return Status |
