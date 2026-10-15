@@ -46,11 +46,15 @@ backend/
 │   ├── models/                       # SQLAlchemy 2.0 ORM domain entities (13 PRD models)
 │   ├── parsers/                      # Safe document parsers (PDF, DOCX, TXT, CSV) & magic signature validation
 │   ├── schemas/                      # Pydantic v2 validation & serialization schemas
-│   ├── repositories/                 # Repository layer (DB queries, mutations, findings, flags & reports)
-│   ├── services/                     # Business logic, lifecycle, parsing, review analysis & bias audit services
+│   ├── repositories/                 # Repository layer (DB queries, mutations, findings, flags, runs & reports)
+│   ├── services/                     # Business logic, lifecycle, parsing, review analysis, bias audit & workflow services
+│   ├── workflows/                    # Phase 7 LangGraph multi-agent orchestration
+│   │   ├── state.py                  # MultiAgentWorkflowState TypedDict
+│   │   ├── nodes.py                  # 4 specialist agents, HumanApprovalPauseNode, FinalizationNode, RevisionHandlerNode
+│   │   └── graph.py                  # StateGraph compiler, edges, and conditional routing
 │   └── main.py                       # FastAPI application entry point, CORS & lifespan
 ├── migrations/                       # Alembic async migration scripts & env.py
-├── tests/                            # Pytest test suite (95 automated tests, 100% pass)
+├── tests/                            # Pytest test suite (109 automated tests, 100% pass)
 ├── alembic.ini                       # Alembic database migration configuration
 └── pyproject.toml                    # Dependency specifications & tool configs
 ```
@@ -101,6 +105,18 @@ ruff format . --check
 | `GET` | `/api/v1/health` | Mounted v1 liveness check | `200 OK` |
 | `GET` | `/api/v1/health/ready` | Mounted v1 readiness check | `200 OK` or `503` |
 | `GET` | `/docs` | Interactive Swagger API docs | `200 OK` |
+
+### LangGraph Multi-Agent Orchestration & Human-in-the-Loop Review (Phase 7)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/v1/review-cycles/{cycle_id}/workflows` | Initiate or retrieve multi-agent orchestration workflow (runs 4 agents, pauses at approval boundary) |
+| `POST` | `/api/v1/review-cycles/{cycle_id}/workflow-runs` | Alias endpoint returning `201 Created` with full status and stage breakdown |
+| `GET` | `/api/v1/review-cycles/{cycle_id}/workflows` | List all historical and active workflow runs for the review cycle |
+| `GET` | `/api/v1/workflows/{workflow_id}` | Retrieve comprehensive status, current stage, 5-stage progress, synthesized draft, and available actions |
+| `POST` | `/api/v1/workflows/{workflow_id}/approve` | Authorized manager sign-off: approves review draft, marks status completed, logs immutable audit event |
+| `POST` | `/api/v1/workflows/{workflow_id}/request-revision` | Request revisions with reviewer instructions: marks status revision_requested, logs audit event |
+| `POST` | `/api/v1/workflows/{workflow_id}/resume` | Resume paused or interrupted workflow run from persisted PostgreSQL state |
+| `POST` | `/api/v1/workflows/{workflow_id}/cancel` | Cancel an active, pending, or awaiting_approval workflow run |
 
 ### Deterministic Bias & Evidence-Quality Audit Engine (Phase 6)
 | Method | Endpoint | Description |

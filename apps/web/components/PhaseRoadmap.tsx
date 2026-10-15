@@ -56,7 +56,7 @@ export function PhaseRoadmap() {
     {
       phase: "Phase 7",
       name: "LangGraph Multi-Agent Engine",
-      status: "upcoming",
+      status: "completed",
       summary: "4 specialist agent nodes, typed state graph, bounded retries, approval pause.",
     },
     {

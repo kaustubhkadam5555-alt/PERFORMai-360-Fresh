@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     review_cycles,
     teams,
     users,
+    workflows,
 )
 
 api_v1_router = APIRouter()
@@ -32,3 +33,6 @@ api_v1_router.include_router(review_analysis.router)
 
 # Mount Bias & Evidence-Quality Audit endpoints (Phase 6)
 api_v1_router.include_router(bias_audit.router)
+
+# Mount LangGraph Multi-Agent Orchestration endpoints (Phase 7)
+api_v1_router.include_router(workflows.router)

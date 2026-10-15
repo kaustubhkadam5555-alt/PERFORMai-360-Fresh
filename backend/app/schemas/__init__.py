@@ -50,6 +50,16 @@ from app.schemas.team import (
     TeamUpdate,
 )
 from app.schemas.user import UserBase, UserCreate, UserResponse, UserUpdate
+from app.schemas.workflow import (
+    WorkflowApprovalRequest,
+    WorkflowCancelRequest,
+    WorkflowDraftReport,
+    WorkflowListResponse,
+    WorkflowRevisionRequest,
+    WorkflowStageStatus,
+    WorkflowStartRequest,
+    WorkflowStatusResponse,
+)
 
 __all__ = [
     "UserBase",
@@ -93,4 +103,12 @@ __all__ = [
     "BiasFlagResponse",
     "AuditExecutionRequest",
     "AuditSummaryResponse",
+    "WorkflowStartRequest",
+    "WorkflowApprovalRequest",
+    "WorkflowRevisionRequest",
+    "WorkflowCancelRequest",
+    "WorkflowStageStatus",
+    "WorkflowDraftReport",
+    "WorkflowStatusResponse",
+    "WorkflowListResponse",
 ]

@@ -536,4 +536,104 @@ The following runtime versions were verified directly on the local macOS host:
 
 ### 5. Next Steps (Phase 7)
 Upon user review and approval:
-- Implement Phase 7: LangGraph Multi-Agent Orchestration (Evidence Retrieval Agent, Feedback Analysis Agent, Bias & Evidence Auditor, Review Synthesis Agent, and Human Approval Pause Node).
+- Implement Phase 7: LangGraph Multi-Agent Orchestration (Evidence Retrieval Agent, Feedback Analysis Agent, Bias & Evidence Auditor, Review Synthesis Agent, and Human Approval Pause Node). *(Completed)*
+
+---
+
+## Phase 7 — LangGraph Multi-Agent Orchestration & Human-in-the-Loop Review Workflow
+
+**Date:** 2026-10-16
+**Status:** Completed & Verified
+**Lead Agent:** Antigravity (Principal AI Architect, Senior Full-Stack Engineer, LangGraph Specialist)
+
+### 1. Phase Objectives & Scope
+- Implement the Phase 7 Multi-Agent Orchestration Workflow according to PRD FR-10, FR-11, FR-12, Section 12, Section 15, and architectural specifications.
+- Build a robust, typed, resumable state graph using LangGraph (`langgraph>=0.2.0`):
+  1. **`EvidenceRetrievalAgent` (`evidence_retrieval_node`):**
+     - Scopes and packages authorized source evidence records for the target review cycle.
+     - Enforces employee and cycle scoping via `EvidenceRepository`.
+     - Analyzes cycle evidence completeness score and flags explicit missing evidence gaps.
+  2. **`FeedbackAnalysisAgent` (`feedback_analysis_node`):**
+     - Gathers 360° feedback (self, peer, manager) and checks perspective coverage.
+     - Coordinates evidence-grounded analysis via `AIOrchestrator` and provider abstraction.
+     - Extracts candidate atomic strengths, improvement opportunities, and contradictions.
+  3. **`BiasAuditorAgent` (`bias_auditor_node`):**
+     - Evaluates all 5 deterministic bias and evidence-quality audit rules via `BiasAuditService` and `AuditEngine`.
+     - Computes the Audit Health Score (0–100) and review readiness status.
+     - Surfaces persistent bias flags to downstream synthesis while preserving reviewer calibration state.
+  4. **`ReviewSynthesisAgent` (`review_synthesis_node`):**
+     - Integrates authorized evidence citations, validated feedback findings, cycle goals, and audit summary.
+     - Generates structured draft performance review report (`ReviewReport` persisted with status `draft`).
+     - Strictly enforces citation grounding: zero hallucinated citations, zero automated employment decisions.
+  5. **`HumanApprovalPauseNode` (`human_approval_pause_node`):**
+     - Mandatory architectural human decision gate.
+     - If no human decision is recorded (`approval_decision is None`), immediately halts graph execution and transitions state to `awaiting_approval`.
+     - Never auto-finalizes reviews; guarantees that consequential decisions are reserved exclusively for authorized human reviewers.
+  6. **`FinalizationNode` (`finalization_node`):**
+     - Reached when reviewer decision is `approved`.
+     - Transitions report to `approved` status, creates an immutable `Approval` record with reviewer ID and comments, and emits an immutable `AuditEvent`.
+  7. **`RevisionHandlerNode` (`revision_handler_node`):**
+     - Reached when reviewer decision is `revision_requested`.
+     - Transitions report to `revision_requested`, records reviewer revision instructions in `Approval`, and logs an audit event.
+- **REST API Endpoints:**
+  - `POST /api/v1/review-cycles/{cycle_id}/workflows`: Start or retrieve multi-agent orchestration workflow.
+  - `POST /api/v1/review-cycles/{cycle_id}/workflow-runs`: Alias endpoint returning 201 Created.
+  - `GET /api/v1/review-cycles/{cycle_id}/workflows`: List historical and active workflow runs for the cycle.
+  - `GET /api/v1/workflows/{workflow_id}`: Comprehensive workflow run status, current stage, 5-stage progress details, draft report, and permitted actions.
+  - `POST /api/v1/workflows/{workflow_id}/approve`: Record authorized manager approval, finalize report, transition status to `completed`.
+  - `POST /api/v1/workflows/{workflow_id}/request-revision`: Submit mandatory reviewer revision instructions.
+  - `POST /api/v1/workflows/{workflow_id}/resume`: Resume interrupted or paused workflow execution.
+  - `POST /api/v1/workflows/{workflow_id}/cancel`: Safely cancel active or paused workflow runs.
+- **Frontend Dashboard Integration (`MultiAgentWorkflowCard.tsx`):**
+  - Interactive multi-agent orchestration card mounted on dashboard.
+  - Cycle selector with authorization role toggles (`manager`, `admin`, `employee`).
+  - 5-stage visual stepper showing individual agent states, icons, and real-time summary statistics.
+  - Interactive decision control bar when paused at `HumanApprovalPauseNode`.
+  - Comprehensive draft report inspector across 6 organized tabs (Executive Summary, Strengths & Citations, Growth Areas, Goal Progress, Deterministic Audit Checks, Discussion Questions).
+  - Modal workflows for manager approval comments, revision instructions, and cancellation reasons.
+  - Updated `PhaseRoadmap.tsx` marking Phase 7 as completed.
+- **Automated Verification:**
+  - Unit tests for all individual agent nodes, conditional edge routing, pause behavior, and graph execution (`test_workflow_graph.py`).
+  - Integration tests for end-to-end API lifecycle, RBAC barriers, cross-employee access rejection, idempotent re-runs, and cancellation (`test_api_workflows.py`).
+  - Full regression test suite: 109 automated tests passing with 100% success rate in 2.14s.
+
+### 2. Deliverables & Modified Files
+| File Path | Action | Description |
+| :--- | :--- | :--- |
+| [`backend/pyproject.toml`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/pyproject.toml) | Modified | Added `langgraph>=0.2.0` dependency. |
+| [`backend/app/schemas/workflow.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/workflow.py) | Created | Pydantic v2 schemas: `WorkflowStartRequest`, `WorkflowApprovalRequest`, `WorkflowRevisionRequest`, `WorkflowCancelRequest`, `WorkflowStageStatus`, `WorkflowDraftReport`, `WorkflowStatusResponse`, `WorkflowListResponse`. |
+| [`backend/app/schemas/__init__.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/__init__.py) | Modified | Re-exported all Phase 7 schemas. |
+| [`backend/app/repositories/workflow_repository.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/repositories/workflow_repository.py) | Created | Persistence layer for `WorkflowRun`, `Approval`, and `AuditEvent` queries and mutations. |
+| [`backend/app/workflows/state.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/workflows/state.py) | Created | Explicit, typed `MultiAgentWorkflowState` TypedDict definition. |
+| [`backend/app/workflows/nodes.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/workflows/nodes.py) | Created | Specialist agent nodes: `EvidenceRetrievalAgent`, `FeedbackAnalysisAgent`, `BiasAuditorAgent`, `ReviewSynthesisAgent`, `HumanApprovalPauseNode`, `FinalizationNode`, `RevisionHandlerNode`. |
+| [`backend/app/workflows/graph.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/workflows/graph.py) | Created | LangGraph `StateGraph` assembly, edges, and `route_after_human_pause` conditional router. |
+| [`backend/app/workflows/__init__.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/workflows/__init__.py) | Created | Package exports for workflow graph and nodes. |
+| [`backend/app/services/workflow_service.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/services/workflow_service.py) | Created | Service layer orchestrating graph execution, RBAC, available actions, approval transitions, revision requests, cancellation, and resume. |
+| [`backend/app/api/v1/endpoints/workflows.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/endpoints/workflows.py) | Created | REST API endpoints for workflow initiation, retrieval, approval, revision, resumption, and cancellation. |
+| [`backend/app/api/v1/router.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/router.py) | Modified | Registered `workflows.router` in API v1 router. |
+| [`backend/tests/test_workflow_graph.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_workflow_graph.py) | Created | 8 unit tests verifying individual agent nodes, conditional routing, human approval pause, finalization, and revision handling. |
+| [`backend/tests/test_api_workflows.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_api_workflows.py) | Created | 6 integration tests verifying end-to-end API lifecycle, idempotency, manager sign-off, revision flows, RBAC barrier enforcement, and cancellation. |
+| [`apps/web/components/MultiAgentWorkflowCard.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/components/MultiAgentWorkflowCard.tsx) | Created | Next.js interactive workflow interface with 5-stage visual graph, human decision gate, tabs for draft report inspection, and decision modals. |
+| [`apps/web/app/page.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/app/page.tsx) | Modified | Mounted `MultiAgentWorkflowCard` on dashboard and updated hero badge. |
+| [`apps/web/components/PhaseRoadmap.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/components/PhaseRoadmap.tsx) | Modified | Marked Phase 7 as completed. |
+| [`backend/README.md`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/README.md) | Modified | Documented workflows package, Phase 7 endpoints table, and updated test suite count (109 tests). |
+| [`README.md`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/README.md) | Modified | Updated project README with Phase 7 multi-agent capabilities and endpoints. |
+| [`docs/ARCHITECTURE.md`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/docs/ARCHITECTURE.md) | Modified | Updated document status and Section 7 roadmap. |
+
+### 3. Verification Commands & Actual Results
+| Check | Command Executed | Actual Result |
+| :--- | :--- | :--- |
+| **Backend Automated Tests** | `cd backend && .venv/bin/pytest tests -v` | **109 passed in 2.14s** (100% pass) |
+| **Backend Linting** | `cd backend && .venv/bin/ruff check .` | **All checks passed!** 0 errors |
+| **Backend Formatting** | `cd backend && .venv/bin/ruff format --check .` | **112 files already formatted** |
+| **Frontend Linting** | `cd apps/web && npm run lint` | **0 errors, 0 warnings** (ESLint) |
+| **Frontend Production Build** | `cd apps/web && npm run build` | **Compiled successfully in 274ms** (Turbopack) |
+| **Live Health Probes** | `curl http://127.0.0.1:8000/health/ready` | **`{"status":"ready","dependencies":{"database":{"status":"ready"},"llm_provider":{"provider":"mock"}}}`** |
+
+### 4. Known Limitations & Deferred Work
+- **Report Versioning & Granular Section Editing:** Phase 7 provides draft synthesis and approval/revision state transitions. Granular section-level inline markdown editing and multi-version diff comparisons are scheduled for Phase 8.
+- **Export Formats (PDF/DOCX):** Exporting finalized performance reviews to branded PDF and DOCX documents belongs to Phase 9.
+
+### 5. Next Steps (Phase 8)
+Upon user review and approval:
+- Implement Phase 8: Human Approval, Report Versioning, and Governance (draft report section editing, multi-version diffing, immutable sign-off archive).

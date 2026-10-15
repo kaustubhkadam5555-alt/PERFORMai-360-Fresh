@@ -99,8 +99,8 @@ class EvidenceContextBuilder:
                 doc_snippet = meta["snippet"]
             elif "text_snippet" in meta and meta["text_snippet"]:
                 doc_snippet = meta["text_snippet"]
-            elif item.summary:
-                doc_snippet = item.summary
+            elif getattr(item, "summary", None):
+                doc_snippet = getattr(item, "summary")
             else:
                 # If physical file exists and is text, read bounded sample safely
                 if item.storage_reference and os.path.exists(item.storage_reference):
