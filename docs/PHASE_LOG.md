@@ -635,5 +635,87 @@ Upon user review and approval:
 - **Export Formats (PDF/DOCX):** Exporting finalized performance reviews to branded PDF and DOCX documents belongs to Phase 9.
 
 ### 5. Next Steps (Phase 8)
+- Implement Phase 8: Human Approval, Report Versioning, and Governance (draft report section editing, multi-version diffing, immutable sign-off archive). *(Completed)*
+
+---
+
+## Phase 8 — Human Approval, Report Versioning & Governance
+
+**Date:** 2026-10-16
+**Status:** Completed & Verified
+**Lead Architect & Full-Stack Engineer:** Antigravity
+
+### 1. Phase Objectives & Scope
+- Implement a complete, production-grade report governance lifecycle extending the Phase 7 multi-agent workflow:
+  1. **Section-Level Report Editing:**
+     - Allows authorized reviewers (managers, administrators) to edit permitted sections independently (`executive_summary`, `strengths`, `growth_areas`, `goal_progress`, `impact_highlights`, `evidence_gaps_and_limitations`, `suggested_discussion_questions`, `reviewer_notes`).
+     - Enforces optimistic concurrency control (`base_version_number`) rejecting stale concurrent edits with HTTP 409 Conflict.
+     - Automatically validates and sanitizes incoming content, enforces length limits, and prevents arbitrary or malformed section keys (HTTP 422).
+     - Distinguishes AI-generated content from human-edited content via `is_ai_generated` metadata.
+  2. **Immutable Report Version History & Snapshotting:**
+     - Created dedicated `report_versions` table with a composite database uniqueness constraint on `(report_id, version_number)`.
+     - Transactionally records complete, immutable structured snapshots whenever meaningful edits or approvals occur.
+     - Preserves sequential version numbers, author identity, author role, change reason, and creation timestamps.
+  3. **Deterministic Version Comparison:**
+     - Pure deterministic diff engine computing unified text diffs (via Python `difflib`) and structured list additions/removals.
+     - Tracks citation and evidence reference delta across versions.
+     - Verifies both versions belong to the exact same report, rejecting mismatched cross-report comparisons with HTTP 400.
+     - Does not rely on nondeterministic LLM calls to compute version diffs.
+  4. **Version-Bound Human Approval & Sign-Off:**
+     - Human approvals bind strictly to an exact version ID and version number.
+     - Stale approval attempts (where the report advanced after reviewer inspection) are rejected with HTTP 409 Conflict.
+     - Duplicate approval attempts on already finalized versions are rejected with HTTP 409 Conflict.
+     - Employee self-approvals and unauthorized cross-employee mutations are strictly blocked (HTTP 403 / 404).
+     - Completed approvals transition the report to `approved` and sync active `WorkflowRun` state to `completed`.
+  5. **Protected Approved Version Invariance:**
+     - Once a version snapshot is approved, it is frozen and tamper-resistant; its content and metadata cannot be silently modified.
+     - Subsequent manager edits advance the version number and create a new version in `draft` status without overwriting the historical approved snapshot.
+  6. **Traceable Governance Audit Trail:**
+     - Every consequential governance action (`report.section_edited`, `report.approved`, `report.revision_requested`) records an immutable `AuditEvent`.
+     - Server-side authenticated principal extraction prevents fabricated actor IDs.
+  7. **Frontend Governance Interface (`ReportGovernanceCard.tsx`):**
+     - Live draft report viewer and section-level editor with validation feedback.
+     - Version history table with snapshot inspection modal.
+     - Interactive deterministic diff comparison viewer with unified text line highlighting and structured list deltas.
+     - Deliberate approval and revision modals with confirmation and comments.
+     - Visual audit event timeline.
+     - Updated `PhaseRoadmap.tsx` marking Phase 8 as completed.
+
+### 2. Deliverables & Modified Files
+| File Path | Action | Description |
+| :--- | :--- | :--- |
+| [`backend/app/models/report_version.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/report_version.py) | Created | Declarative SQLAlchemy model for `ReportVersion` with unique constraint on `(report_id, version_number)`. |
+| [`backend/app/models/approval.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/approval.py) | Modified | Added `version_id` (FK to `report_versions.id`) and `version_number` columns to `Approval`. |
+| [`backend/app/models/review_report.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/review_report.py) | Modified | Added `versions` relationship to `ReportVersion`. |
+| [`backend/app/models/__init__.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/__init__.py) | Modified | Re-exported `ReportVersion`. |
+| [`backend/migrations/versions/8e1543950fd6_create_report_versions_and_update_.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/migrations/versions/8e1543950fd6_create_report_versions_and_update_.py) | Created | Alembic migration creating `report_versions`, adding version FKs to `approvals`, and backfilling existing records. |
+| [`backend/app/schemas/report_governance.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/report_governance.py) | Created | Pydantic v2 schemas: `SectionEditRequest`, `ReportVersionSummary`, `ReportVersionDetail`, `ReportVersionListResponse`, `SectionDiffResult`, `VersionComparisonResponse`, `ReportApprovalRequest`, `ReportRevisionRequest`, `ApprovalRecordResponse`, `ApprovalHistoryResponse`, `GovernanceAuditEventResponse`, `GovernanceAuditListResponse`, `ReportDetailResponse`. |
+| [`backend/app/schemas/__init__.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/__init__.py) | Modified | Re-exported all report governance schemas. |
+| [`backend/app/repositories/report_governance_repository.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/repositories/report_governance_repository.py) | Created | Persistence layer for version queries, atomic snapshot creation, approvals, and audit trail retrieval. |
+| [`backend/app/repositories/review_analysis_repository.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/repositories/review_analysis_repository.py) | Modified | Ensured initial draft creation transactionally records version 1 in `report_versions`. |
+| [`backend/app/services/report_governance_service.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/services/report_governance_service.py) | Created | Core service layer: section editing, optimistic concurrency, version listing, deterministic diffing, approval binding, and audit logging. |
+| [`backend/app/api/v1/endpoints/reports.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/endpoints/reports.py) | Created | REST API endpoints for reports, section edits, versions, comparisons, approvals, revisions, and audit trails. |
+| [`backend/app/api/v1/router.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/router.py) | Modified | Registered `reports.router` in API v1 router. |
+| [`backend/tests/test_report_governance.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_report_governance.py) | Created | 11 automated unit and integration tests covering editing, concurrency conflicts, snapshot retrieval, diffing, stale approval defense, version invariance, and RBAC. |
+| [`apps/web/components/ReportGovernanceCard.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/components/ReportGovernanceCard.tsx) | Created | Frontend interface for section editing, version history, deterministic comparison, deliberate approval, and governance audit trail. |
+| [`apps/web/app/page.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/app/page.tsx) | Modified | Mounted `ReportGovernanceCard` on dashboard and updated hero badge. |
+| [`apps/web/components/PhaseRoadmap.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/components/PhaseRoadmap.tsx) | Modified | Marked Phase 8 as completed. |
+
+### 3. Verification Commands & Actual Results
+| Check | Command Executed | Actual Result |
+| :--- | :--- | :--- |
+| **Backend Automated Tests** | `cd backend && .venv/bin/pytest tests -v` | **120 passed in 2.60s** (100% pass, 0 regressions) |
+| **Backend Linting** | `cd backend && .venv/bin/ruff check .` | **All checks passed!** 0 errors |
+| **Backend Formatting** | `cd backend && .venv/bin/ruff format --check .` | **118 files already formatted** |
+| **Alembic Migration** | `cd backend && .venv/bin/alembic upgrade head` | **`8e1543950fd6 (head)` applied cleanly** |
+| **Frontend Linting** | `cd apps/web && npm run lint` | **0 errors, 0 warnings** (ESLint) |
+| **Frontend Production Build** | `cd apps/web && npm run build` | **Compiled successfully in 224ms** (Turbopack) |
+| **Git Working Tree Safety** | `git diff --check` | **0 errors, clean working tree** |
+
+### 4. Known Limitations & Deferred Work
+- **Approval Revocation:** The PRD does not define arbitrary approval revocation; once approved, a version snapshot remains permanently immutable. Any subsequent adjustments spawn a new draft version requiring fresh sign-off.
+- **Export Formats (PDF/DOCX):** Generating branded PDF and DOCX documents with cryptographic hash seals and corporate styling belongs to Phase 9.
+
+### 5. Next Steps (Phase 9)
 Upon user review and approval:
-- Implement Phase 8: Human Approval, Report Versioning, and Governance (draft report section editing, multi-version diffing, immutable sign-off archive).
+- Implement Phase 9: Dashboard Polish, Analytics Visualizations (Recharts), Export Capabilities, and Full WCAG Accessibility.

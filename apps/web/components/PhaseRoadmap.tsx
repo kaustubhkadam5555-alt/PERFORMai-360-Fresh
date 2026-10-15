@@ -62,7 +62,7 @@ export function PhaseRoadmap() {
     {
       phase: "Phase 8",
       name: "Human Approval & Report Governance",
-      status: "upcoming",
+      status: "completed",
       summary: "Draft report editing, approval/revision actions, versioning, immutable audit log.",
     },
     {

@@ -8,6 +8,7 @@ from app.db.base import Base, TimestampMixin, UUIDMixin
 
 if TYPE_CHECKING:
     from app.models.approval import Approval
+    from app.models.report_version import ReportVersion
     from app.models.review_cycle import ReviewCycle
     from app.models.user import User
     from app.models.workflow_run import WorkflowRun
@@ -35,4 +36,10 @@ class ReviewReport(Base, UUIDMixin, TimestampMixin):
     created_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by_id])
     approvals: Mapped[List["Approval"]] = relationship(
         "Approval", back_populates="report", cascade="all, delete-orphan"
+    )
+    versions: Mapped[List["ReportVersion"]] = relationship(
+        "ReportVersion",
+        back_populates="report",
+        cascade="all, delete-orphan",
+        order_by="desc(ReportVersion.version_number)",
     )

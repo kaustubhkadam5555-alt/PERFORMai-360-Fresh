@@ -106,6 +106,20 @@ ruff format . --check
 | `GET` | `/api/v1/health/ready` | Mounted v1 readiness check | `200 OK` or `503` |
 | `GET` | `/docs` | Interactive Swagger API docs | `200 OK` |
 
+### Human Approval, Report Versioning & Governance (Phase 8)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/reports/{report_id}` | Retrieve report details, active status, current version number, and structured content |
+| `GET` | `/api/v1/review-cycles/{cycle_id}/report` | Retrieve active or finalized report for a specific review cycle |
+| `POST` | `/api/v1/reports/{report_id}/sections/{section_key}` | Edit an individual section with optimistic concurrency control (`base_version_number`) |
+| `GET` | `/api/v1/reports/{report_id}/versions` | List all historical immutable versions and author metadata for a report |
+| `GET` | `/api/v1/reports/{report_id}/versions/{version_id_or_number}` | Retrieve exact immutable structured content snapshot for a specific version |
+| `GET` | `/api/v1/reports/{report_id}/compare` | Deterministic version comparison (unified text diffs & structured list deltas) |
+| `POST` | `/api/v1/reports/{report_id}/approve` | Authorized human sign-off bound to exact version number/ID; rejects stale approvals |
+| `POST` | `/api/v1/reports/{report_id}/request-revision` | Transition report to `revision_requested` with mandatory reviewer instructions |
+| `GET` | `/api/v1/reports/{report_id}/approvals` | List approval and revision decision records associated with a report |
+| `GET` | `/api/v1/reports/{report_id}/audit-events` | Retrieve traceable governance audit event trail (`report.section_edited`, `report.approved`, etc.) |
+
 ### LangGraph Multi-Agent Orchestration & Human-in-the-Loop Review (Phase 7)
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |

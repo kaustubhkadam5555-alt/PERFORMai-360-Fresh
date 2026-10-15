@@ -5,6 +5,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.finding import Finding
+from app.models.report_version import ReportVersion
 from app.models.review_report import ReviewReport
 from app.models.workflow_run import WorkflowRun
 
@@ -173,6 +174,24 @@ class ReviewAnalysisRepository:
         db.add(report)
         await db.commit()
         await db.refresh(report)
+
+        # Transactionally create corresponding immutable ReportVersion snapshot
+        version = ReportVersion(
+            report_id=report.id,
+            cycle_id=cycle_id,
+            version_number=report.version_number,
+            structured_content=structured_content,
+            status=status,
+            changed_section="all",
+            change_summary="Initial AI synthesized draft" if generated_by_run_id else "Report draft generated",
+            author_id=created_by_id,
+            author_role="system" if generated_by_run_id else "manager",
+            is_ai_generated=bool(generated_by_run_id),
+        )
+        db.add(version)
+        await db.commit()
+        await db.refresh(version)
+
         return report
 
     @staticmethod

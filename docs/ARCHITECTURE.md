@@ -218,9 +218,26 @@ erDiagram
         uuid generated_by_run_id FK
     }
 
+    REPORT_VERSION {
+        uuid id PK
+        uuid report_id FK
+        uuid cycle_id FK
+        int version_number
+        string status
+        string changed_section
+        string change_summary
+        uuid author_id FK
+        string author_role
+        boolean is_ai_generated
+        jsonb structured_content
+        timestamp created_at
+    }
+
     APPROVAL {
         uuid id PK
         uuid report_id FK
+        uuid version_id FK
+        int version_number
         uuid reviewer_id FK
         string decision
         text comments
@@ -242,9 +259,11 @@ erDiagram
 
 ## 6. Security, Privacy, and Audit Controls
 
-- **Role-Based Access Control (RBAC):** Backend endpoints authenticate callers via JWT tokens and verify role permissions (`Employee`, `Peer Reviewer`, `Manager`, `Administrator`).
+- **Role-Based Access Control (RBAC):** Backend endpoints authenticate callers via JWT/header principals and verify role permissions (`Employee`, `Peer Reviewer`, `Manager`, `Administrator`).
 - **Data Isolation:** All database queries are filtered by tenant/employee and cycle scope. Peer feedback visibility policies are enforced at the service layer.
-- **Audit Logging:** Critical events (logins, evidence uploads, analysis triggers, report revisions, approval decisions) generate immutable, append-only `AuditEvent` records. Sensitive credentials or confidential prompts are never logged.
+- **Report Version Invariance & Concurrency Control:** Saved draft edits enforce optimistic concurrency (`base_version_number`). Historical snapshots in `report_versions` are immutable. Once a version snapshot is approved, subsequent edits advance to a new version in `draft` status without overwriting the signed-off historical snapshot.
+- **Deterministic Diff Engine:** Pure algorithmic diff calculation (unified text diffs and structured list deltas) guarantees transparent, non-hallucinated version comparisons.
+- **Audit Logging:** Critical events (logins, evidence uploads, analysis triggers, section edits, approvals, revision requests) generate immutable, append-only `AuditEvent` records. Sensitive credentials or confidential prompts are never logged.
 - **Untrusted File Parsing:** Uploaded documents (PDF, DOCX, TXT, CSV) are treated as untrusted data. Files undergo strict MIME validation, file size limits (default 10 MB), and safe parsing in isolation.
 - **Synthetic Data Baseline:** Test fixtures and demo scenarios strictly utilize synthetic identities to guarantee privacy during demonstrations.
 
@@ -261,7 +280,7 @@ Development is executed sequentially across twelve controlled phases:
 - **Phase 5:** Single-Pass AI Analysis & Grounded Performance Insights *(Completed)*
 - **Phase 6:** Deterministic Bias & Evidence-Quality Audit Engine *(Completed)*
 - **Phase 7:** LangGraph Multi-Agent Orchestration *(Completed)*
-- **Phase 8:** Human Approval, Report Versioning, and Governance
+- **Phase 8:** Human Approval, Report Versioning, and Governance *(Completed)*
 - **Phase 9:** Dashboard Polish, Accessibility, and Export
 - **Phase 10:** Comprehensive Testing, Security, and Quality Review
 - **Phase 11:** Final Documentation, Evaluation Metrics, and Demonstration Readiness

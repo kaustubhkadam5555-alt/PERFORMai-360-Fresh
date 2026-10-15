@@ -6,6 +6,7 @@ from app.models.evidence import Evidence, EvidenceAccessPolicy, EvidenceSourceTy
 from app.models.feedback import Feedback, FeedbackType, FeedbackVisibility
 from app.models.finding import Finding
 from app.models.goal import Goal, GoalStatus
+from app.models.report_version import ReportVersion
 from app.models.review_cycle import ReviewCycle, ReviewCycleStatus
 from app.models.review_report import ReviewReport
 from app.models.team import Team, TeamMembership
@@ -34,6 +35,7 @@ __all__ = [
     "BiasFlag",
     "WorkflowRun",
     "ReviewReport",
+    "ReportVersion",
     "Approval",
     "AuditEvent",
 ]

@@ -4,6 +4,7 @@ import React from "react";
 import { Header } from "../components/Header";
 import { BackendHealthCard } from "../components/BackendHealthCard";
 import { MultiAgentWorkflowCard } from "../components/MultiAgentWorkflowCard";
+import { ReportGovernanceCard } from "../components/ReportGovernanceCard";
 import { ReviewAnalysisCard } from "../components/ReviewAnalysisCard";
 import { AuditReviewCard } from "../components/AuditReviewCard";
 import { PillarCards } from "../components/PillarCards";
@@ -26,7 +27,7 @@ export default function Home() {
               {/* Badge */}
               <div className="inline-flex items-center space-x-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3.5 py-1.5 text-xs font-semibold text-purple-300">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Phase 7 — LangGraph Multi-Agent Orchestration &amp; Human-in-the-Loop Live</span>
+                <span>Phase 8 — Human Approval, Report Versioning &amp; Governance Active</span>
               </div>
 
               {/* Headline */}
@@ -73,6 +74,9 @@ export default function Home() {
 
             {/* Phase 7: LangGraph Multi-Agent Orchestration Interface */}
             <MultiAgentWorkflowCard />
+
+            {/* Phase 8: Human Approval, Report Versioning & Governance Interface */}
+            <ReportGovernanceCard />
 
             {/* Core Architectural Pillars */}
             <PillarCards />

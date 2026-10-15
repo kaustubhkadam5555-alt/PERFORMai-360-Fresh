@@ -6,6 +6,7 @@ from app.api.v1.endpoints import (
     feedback,
     goals,
     health,
+    reports,
     review_analysis,
     review_cycles,
     teams,
@@ -36,3 +37,6 @@ api_v1_router.include_router(bias_audit.router)
 
 # Mount LangGraph Multi-Agent Orchestration endpoints (Phase 7)
 api_v1_router.include_router(workflows.router)
+
+# Mount Human Approval, Report Versioning & Governance endpoints (Phase 8)
+api_v1_router.include_router(reports.router)
