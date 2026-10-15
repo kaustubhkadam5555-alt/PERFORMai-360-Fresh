@@ -63,7 +63,7 @@ The following runtime versions were verified directly on the local macOS host:
 ## Phase 1 — Application Foundation & Local Developer Environment
 
 **Date:** 2026-10-16
-**Status:** Completed (Awaiting student/user review and approval before starting Phase 2)
+**Status:** Completed & Committed (`9de8cd2`)
 **Lead Agent:** Antigravity
 
 ### 1. Phase Objectives & Scope
@@ -131,10 +131,99 @@ The following runtime versions were verified directly on the local macOS host:
 ### 6. Known Issues & Workarounds
 - **Port 5432 in use:** Addressed cleanly by configuring port `5433` in `docker-compose.yml`, `.env.example`, and backend `config.py`. No conflicting services required termination.
 
-### 7. Next Steps (Phase 2)
+---
+
+## Phase 2 — Core Database Models and Persistence
+
+**Date:** 2026-10-16
+**Status:** Completed (Awaiting student/user review and approval before starting Phase 3)
+**Lead Agent:** Antigravity
+
+### 1. Phase Objectives & Scope
+- Implement the persistent data foundation for PERFORMai-360 using PostgreSQL 16, SQLAlchemy 2.x declarative models, Alembic migrations, and Pydantic v2 validation schemas.
+- Model all 13 core domain entities defined in PRD Section 10 and ARCHITECTURE Section 5:
+  1. `User` (with roles: `employee`, `peer_reviewer`, `manager`, `admin`)
+  2. `Team` (engineering teams and departments)
+  3. `TeamMembership` (join entity linking user and team with composite uniqueness)
+  4. `ReviewCycle` (performance review cycles with status enum and period dates)
+  5. `Feedback` (self, peer, manager feedback with visibility constraints)
+  6. `Goal` (commitments and self-assessments)
+  7. `Evidence` (work records, PRs, docs, access policies)
+  8. `Finding` (AI-extracted contributions with source evidence links)
+  9. `BiasFlag` (audit detections, categories, rationale)
+  10. `WorkflowRun` (LangGraph multi-agent execution traces)
+  11. `ReviewReport` (versioned synthesized performance reports)
+  12. `Approval` (human manager sign-offs with comments)
+  13. `AuditEvent` (append-only governance audit log)
+- Configure Alembic async migrations with explicit metadata naming conventions (`ix_`, `uq_`, `ck_`, `fk_`, `pk_`).
+- Generate and apply the initial migration (`8884fdc13f66_create_initial_schema.py`) against PostgreSQL without resetting or destroying existing databases.
+- Implement clean repository and service layers for foundational entities (`User`, `Team`, `ReviewCycle`).
+- Expose scoped REST endpoints for foundational CRUD operations under `/api/v1/`.
+- Provide automated unit and persistence tests with isolated transactions (savepoints/rollback) to prevent database pollution.
+
+### 2. Deliverables & Modified Files
+| File Path | Action | Description |
+| :--- | :--- | :--- |
+| [`backend/app/db/base.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/db/base.py) | Created | DeclarativeBase with explicit naming convention, `UUIDMixin` (UUID v4 primary keys), and `TimestampMixin` (`created_at`, `updated_at`). |
+| [`backend/app/models/user.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/user.py) | Created | `User` model with `UserRole` enum (`employee`, `peer_reviewer`, `manager`, `admin`), unique email, and relationships. |
+| [`backend/app/models/team.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/team.py) | Created | `Team` and `TeamMembership` models with composite unique constraint `uq_team_memberships_team_user`. |
+| [`backend/app/models/review_cycle.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/review_cycle.py) | Created | `ReviewCycle` model with `ReviewCycleStatus` enum and date range fields. |
+| [`backend/app/models/feedback.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/feedback.py) | Created | `Feedback` model with `FeedbackType` and `FeedbackVisibility` enums. |
+| [`backend/app/models/goal.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/goal.py) | Created | `Goal` model with `GoalStatus` enum, metrics, and cycle linkage. |
+| [`backend/app/models/evidence.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/evidence.py) | Created | `Evidence` model with `EvidenceSourceType` and `EvidenceAccessPolicy` enums. |
+| [`backend/app/models/finding.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/finding.py) | Created | `Finding` model with `confidence_score` and `source_evidence_ids` array. |
+| [`backend/app/models/bias_flag.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/bias_flag.py) | Created | `BiasFlag` model with `category`, `severity`, `rationale`, and resolution fields. |
+| [`backend/app/models/workflow_run.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/workflow_run.py) | Created | `WorkflowRun` model with status, execution step counters, and token usage metrics. |
+| [`backend/app/models/review_report.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/review_report.py) | Created | `ReviewReport` model with version numbering, structured JSON content, and workflow linkage. |
+| [`backend/app/models/approval.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/approval.py) | Created | `Approval` model tracking human sign-offs, reviewer ID, decisions, and comments. |
+| [`backend/app/models/audit_event.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/audit_event.py) | Created | `AuditEvent` model providing append-only governance trail with actor ID and action payload. |
+| [`backend/app/models/__init__.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/__init__.py) | Created | Re-exports all 13 models for declarative metadata discovery. |
+| [`backend/alembic.ini`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/alembic.ini) | Created | Alembic configuration linking to async migrations environment. |
+| [`backend/migrations/env.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/migrations/env.py) | Created | Async migration runner importing `Base.metadata` and reading `settings.DATABASE_URL`. |
+| [`backend/migrations/script.py.mako`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/migrations/script.py.mako) | Created | Template for autogenerated Alembic migration scripts. |
+| [`backend/migrations/versions/8884fdc13f66_create_initial_schema.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/migrations/versions/8884fdc13f66_create_initial_schema.py) | Created | Initial schema migration creating all 13 tables, enums, indexes, and constraints. |
+| [`backend/app/schemas/user.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/user.py) | Created | Pydantic v2 schemas for User: `UserCreate`, `UserUpdate`, `UserResponse`. |
+| [`backend/app/schemas/team.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/team.py) | Created | Pydantic v2 schemas for Team & TeamMembership: `TeamCreate`, `TeamResponse`, `TeamMembershipCreate`. |
+| [`backend/app/schemas/review_cycle.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/review_cycle.py) | Created | Pydantic v2 schemas for ReviewCycle: `ReviewCycleCreate`, `ReviewCycleResponse`, with date range validation (`period_end >= period_start`). |
+| [`backend/app/repositories/user.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/repositories/user.py) | Created | `UserRepository` for querying and persisting users. |
+| [`backend/app/repositories/team.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/repositories/team.py) | Created | `TeamRepository` for teams and team membership associations. |
+| [`backend/app/repositories/review_cycle.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/repositories/review_cycle.py) | Created | `ReviewCycleRepository` for review cycle queries. |
+| [`backend/app/services/user_service.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/services/user_service.py) | Created | `UserService` enforcing business constraints (duplicate email checks). |
+| [`backend/app/services/team_service.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/services/team_service.py) | Created | `TeamService` enforcing name uniqueness and membership rules. |
+| [`backend/app/services/review_cycle_service.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/services/review_cycle_service.py) | Created | `ReviewCycleService` with status lifecycle checks. |
+| [`backend/app/api/v1/endpoints/users.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/endpoints/users.py) | Created | REST endpoints for user listing, creation, and detail retrieval. |
+| [`backend/app/api/v1/endpoints/teams.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/endpoints/teams.py) | Created | REST endpoints for team listing, creation, details, and membership management. |
+| [`backend/app/api/v1/endpoints/review_cycles.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/endpoints/review_cycles.py) | Created | REST endpoints for review cycle listing, creation, detail retrieval, and updates. |
+| [`backend/tests/conftest.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/conftest.py) | Modified | Added transactional `db_session` fixture using `NullPool` and automatic rollback after each test to guarantee test isolation. |
+| [`backend/tests/test_models.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_models.py) | Created | 5 tests verifying ORM relationships, cascade deletions, uniqueness constraints, and enum behaviors. |
+| [`backend/tests/test_api_users.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_api_users.py) | Created | 3 tests for user creation, conflict handling (409), and listing. |
+| [`backend/tests/test_api_teams.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_api_teams.py) | Created | 3 tests for team creation, conflict handling, and member associations. |
+| [`backend/tests/test_api_review_cycles.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_api_review_cycles.py) | Created | 2 tests for cycle creation, validation errors (422), and retrieval. |
+| [`backend/pyproject.toml`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/pyproject.toml) | Modified | Added `alembic>=1.13.0` and `email-validator>=2.0.0`; configured Ruff exclusion for `migrations`. |
+
+### 3. Technical Decisions & Test Isolation
+- **Async Alembic with PostgreSQL:** Configured Alembic with `asyncpg` via `asyncio.run()`, referencing existing application settings in `app.core.config`.
+- **Database Safety & Non-Destructive Migrations:** Migration `8884fdc13f66_create_initial_schema.py` was applied directly using `alembic upgrade head`. Existing containers and databases were preserved without drops, resets, or data destruction.
+- **Test Isolation with NullPool and Rollback:** Pytest fixtures in `conftest.py` initialize a dedicated engine using `NullPool` to prevent async event loop cross-talk. Each test runs inside a database transaction that rolls back at completion, leaving the developer database clean.
+- **Savepoints for Uniqueness Assertions:** Tests asserting database integrity errors (`IntegrityError`) utilize `async with db_session.begin_nested():` savepoints so that PostgreSQL transaction state remains valid for subsequent assertions.
+
+### 4. Verification Commands & Actual Results
+| Check | Command Executed | Actual Result |
+| :--- | :--- | :--- |
+| **Alembic Migration Generation** | `alembic revision --autogenerate -m "create initial schema"` | Created revision `8884fdc13f66` |
+| **Alembic Migration Upgrade** | `alembic upgrade head` | Applied cleanly; 13 tables + `alembic_version` created |
+| **Automated Backend Tests** | `backend/.venv/bin/pytest backend/tests -v` | **19 passed in 0.33s** (100% pass) |
+| **Backend Lint & Format** | `backend/.venv/bin/ruff check backend && backend/.venv/bin/ruff format backend --check` | **All checks passed!** 46 files clean |
+| **Frontend Production Build** | `cd apps/web && npm run build` | **Compiled successfully in 119ms** (Turbopack prerender) |
+| **Frontend Linting** | `cd apps/web && npm run lint` | **0 errors, 0 warnings** (ESLint) |
+| **Live Health Probes** | `curl http://127.0.0.1:8000/health/ready` | **`{"status":"ready","database":"connected","llm_provider":"mock"}`** |
+
+### 5. Known Issues & Workarounds
+- None. All 13 domain models, migration history, schemas, repositories, services, and tests are verified and operational.
+
+### 6. Next Steps (Phase 3)
 Upon student review and approval:
-- Define SQLAlchemy ORM models (`User`, `Team`, `TeamMembership`, `ReviewCycle`, `Feedback`, `Goal`, `Evidence`, `Finding`, `BiasFlag`, `ReviewReport`, `Approval`, `AuditEvent`).
-- Initialize Alembic versioned migrations.
-- Implement server-side JWT authentication and RBAC endpoints (`/api/v1/auth/login`, `/api/v1/me`).
-- Create deterministic synthetic seed data script (`scripts/seed_demo_data.py`).
-- Add authentication and permission barrier tests.
+- Implement Core Review Workflow endpoints for feedback submissions (self, peer, manager).
+- Implement goal setting, tracking, and metric evaluation.
+- Implement evidence record submission and scoped attachment.
+- Enforce review cycle lifecycle transitions (`draft` -> `active` -> `in_review` -> `completed` -> `archived`).

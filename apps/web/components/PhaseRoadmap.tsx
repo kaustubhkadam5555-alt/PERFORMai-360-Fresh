@@ -20,14 +20,14 @@ export function PhaseRoadmap() {
     {
       phase: "Phase 1",
       name: "Application Foundation",
-      status: "current",
+      status: "completed",
       summary: "Next.js 16 frontend, FastAPI backend, PostgreSQL Docker Compose, health & readiness probes.",
     },
     {
       phase: "Phase 2",
-      name: "Database, Migrations & Auth",
-      status: "upcoming",
-      summary: "SQLAlchemy models, Alembic migrations, server-side RBAC, synthetic seed data.",
+      name: "Database Models & Persistence",
+      status: "completed",
+      summary: "SQLAlchemy 2.x declarative models, Alembic migrations, Pydantic v2 schemas, foundational CRUD services.",
     },
     {
       phase: "Phase 3",

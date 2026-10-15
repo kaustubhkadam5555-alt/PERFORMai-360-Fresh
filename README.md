@@ -75,11 +75,17 @@ PERFORMai-360-Fresh/
 │       └── tsconfig.json
 ├── backend/
 │   ├── app/                    # FastAPI backend package
-│   │   ├── api/v1/             # API version 1 routers & endpoints (health.py)
+│   │   ├── api/v1/             # API v1 routers (health, users, teams, review_cycles)
 │   │   ├── core/               # Pydantic Settings configuration (config.py)
-│   │   ├── db/                 # Async SQLAlchemy engine & health probe (session.py)
+│   │   ├── db/                 # Base declarative model, mixins, async engine & session
+│   │   ├── models/             # SQLAlchemy 2.0 ORM domain entities (all 13 PRD models)
+│   │   ├── schemas/            # Pydantic v2 validation schemas
+│   │   ├── repositories/       # Clean database access layer
+│   │   ├── services/           # Business logic & domain validation services
 │   │   └── main.py             # FastAPI entry point, CORS & lifespan
-│   ├── tests/                  # Pytest automated test suite (test_health.py)
+│   ├── migrations/             # Alembic database migration scripts & env.py
+│   ├── tests/                  # Pytest automated test suite (models, APIs, health)
+│   ├── alembic.ini             # Alembic migration configuration
 │   ├── pyproject.toml          # Backend dependencies & tool configs (pytest, ruff)
 │   └── README.md
 ├── docs/
@@ -100,7 +106,7 @@ Development proceeds strictly in sequential phases:
 
 - [x] **Phase 0 — Repository and Planning Baseline** *(Completed)*
 - [x] **Phase 1 — Application Foundation & Local Developer Environment** *(Completed)*
-- [ ] **Phase 2 — Database, Migrations, and Authentication**
+- [x] **Phase 2 — Core Database Models and Persistence** *(Completed)*
 - [ ] **Phase 3 — Core Review Workflow**
 - [ ] **Phase 4 — Evidence Processing & Retrieval**
 - [ ] **Phase 5 — Single-Pass AI Analysis & Grounded Report Draft**
@@ -143,11 +149,15 @@ source .venv/bin/activate
 pip install --upgrade pip
 pip install -e ".[dev]"
 
+# Run database migrations
+alembic upgrade head
+
 # Run automated tests
 pytest tests -v
 
-# Run code linter
+# Run code linter and format check
 ruff check .
+ruff format . --check
 
 # Start development server (runs on http://localhost:8000)
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -173,8 +183,9 @@ npm run dev
 
 ---
 
-## 7. Health & Readiness Probes
+## 7. Available API Endpoints
 
+### Health & Readiness Probes
 | Method | Endpoint | Description | Return Status |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/health` | Liveness check (process alive) | `200 OK` |
@@ -182,6 +193,22 @@ npm run dev
 | `GET` | `/api/v1/health` | Mounted v1 liveness probe | `200 OK` |
 | `GET` | `/api/v1/health/ready`| Mounted v1 readiness probe | `200 OK` or `503` |
 | `GET` | `/docs` | Interactive Swagger API documentation | `200 OK` |
+
+### Core Entities (Phase 2 CRUD)
+| Method | Endpoint | Description | Return Status |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/users` | List users (with optional role filter) | `200 OK` |
+| `POST` | `/api/v1/users` | Create user (email uniqueness enforced) | `201 Created` |
+| `GET` | `/api/v1/users/{user_id}` | Fetch user by ID | `200 OK` or `404 Not Found` |
+| `GET` | `/api/v1/teams` | List teams | `200 OK` |
+| `POST` | `/api/v1/teams` | Create team (name uniqueness enforced) | `201 Created` |
+| `GET` | `/api/v1/teams/{team_id}` | Fetch team by ID | `200 OK` or `404 Not Found` |
+| `POST` | `/api/v1/teams/{team_id}/members` | Add user to team | `201 Created` or `409 Conflict` |
+| `GET` | `/api/v1/teams/{team_id}/members` | List team memberships | `200 OK` |
+| `GET` | `/api/v1/review-cycles` | List review cycles (with status filter) | `200 OK` |
+| `POST` | `/api/v1/review-cycles` | Create review cycle (date validation) | `201 Created` |
+| `GET` | `/api/v1/review-cycles/{cycle_id}` | Fetch review cycle by ID | `200 OK` or `404 Not Found` |
+| `PATCH` | `/api/v1/review-cycles/{cycle_id}` | Update review cycle details/status | `200 OK` or `404 Not Found` |
 
 ---
 

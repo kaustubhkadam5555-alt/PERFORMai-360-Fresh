@@ -1,5 +1,5 @@
 import asyncio
-from typing import Tuple
+from typing import AsyncGenerator, Tuple
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -20,6 +20,15 @@ async_session_maker = async_sessionmaker(
     class_=AsyncSession,
     expire_on_commit=False,
 )
+
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """Dependency provider for FastAPI route handlers."""
+    async with async_session_maker() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
 
 
 async def check_database_connection(timeout_seconds: float = 3.0) -> Tuple[bool, str]:

@@ -43,12 +43,8 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "performai360"
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5433
-    DATABASE_URL: str = (
-        "postgresql+asyncpg://postgres:postgres_password_placeholder@localhost:5433/performai360"
-    )
-    SYNC_DATABASE_URL: str = (
-        "postgresql://postgres:postgres_password_placeholder@localhost:5433/performai360"
-    )
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres_password_placeholder@localhost:5433/performai360"
+    SYNC_DATABASE_URL: str = "postgresql://postgres:postgres_password_placeholder@localhost:5433/performai360"
 
     # LLM Settings
     LLM_PROVIDER: str = "mock"

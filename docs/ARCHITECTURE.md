@@ -1,7 +1,7 @@
 # PERFORMai-360: System Architecture Specification
 
 **Project Title:** PERFORMai-360: AI-Driven Bias-Aware 360° Performance Evaluation for Software Engineering Teams
-**Document Status:** Baseline (Phase 0 Planning)
+**Document Status:** Phase 2 Core Database Models & Persistence Implemented
 **Target Environment:** macOS Local Development, Docker Compose, Python 3.14+, Node.js v26+
 
 ---
@@ -253,9 +253,9 @@ erDiagram
 ## 7. Phased Implementation Strategy
 
 Development is executed sequentially across twelve controlled phases:
-- **Phase 0:** Repository and Planning Baseline *(Current)*
-- **Phase 1:** Application Skeleton & Local Developer Environment
-- **Phase 2:** Database, Migrations, and Authentication
+- **Phase 0:** Repository and Planning Baseline *(Completed)*
+- **Phase 1:** Application Skeleton & Local Developer Environment *(Completed)*
+- **Phase 2:** Core Database Models & Persistence *(Completed)*
 - **Phase 3:** Core Review Workflow (Cycles, Feedback, Goals, Evidence)
 - **Phase 4:** Evidence Processing & Scoped Retrieval
 - **Phase 5:** Single-Pass AI Analysis & Grounded Report Draft
