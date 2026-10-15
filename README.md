@@ -152,7 +152,7 @@ pip install -e ".[dev]"
 # Run database migrations
 alembic upgrade head
 
-# Run automated tests (31 tests)
+# Run automated tests (64 tests)
 pytest tests -v
 
 # Run code linter and format check
@@ -214,12 +214,20 @@ npm run dev
 | `PATCH` | `/api/v1/goals/{id}` | Update goal status, targets, and self-assessment notes | `200 OK` |
 | `DELETE` | `/api/v1/goals/{id}` | Delete goal record | `204 No Content` |
 | `GET/POST`| `/api/v1/review-cycles/{id}/goals` | List or create goals directly under a cycle | `200 OK` / `201 Created` |
-| `GET` | `/api/v1/evidence` | List evidence (filtering: `cycle_id`, `source_type`, dates) | `200 OK` |
+
+### Evidence Management & Safe Processing (Phase 3 & Phase 4)
+| Method | Endpoint | Description | Return Status |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/evidence` | List evidence (filtering: `cycle_id`, `employee_id`, `source_type`, dates, access policies) | `200 OK` |
 | `POST` | `/api/v1/evidence` | Register evidence metadata (`pr`, `commit`, `design_doc`, `ticket`, `document_upload`) | `201 Created`, `422` |
-| `GET` | `/api/v1/evidence/{id}` | Fetch evidence by ID (access policy checks) | `200 OK` or `404 Not Found` |
+| `POST` | `/api/v1/evidence/upload` | Multipart file upload (PDF, DOCX, TXT, CSV), magic signature validation, safe text parsing | `201 Created`, `413`, `422` |
+| `GET` | `/api/v1/evidence/{id}` | Fetch evidence by ID (access policy checks: `internal`, `manager_only`, `restricted`, `confidential`) | `200 OK` or `404 Not Found` |
+| `GET` | `/api/v1/evidence/{id}/content` | Download or view stored document file (enforces cycle, employee, and role permissions) | `200 OK` or `404 Not Found` |
 | `PATCH` | `/api/v1/evidence/{id}` | Update evidence metadata or access policy | `200 OK` |
-| `DELETE` | `/api/v1/evidence/{id}` | Delete evidence record | `204 No Content` |
+| `DELETE` | `/api/v1/evidence/{id}` | Delete evidence record and unlink physical storage | `204 No Content` |
 | `GET/POST`| `/api/v1/review-cycles/{id}/evidence` | List or register evidence directly under a cycle | `200 OK` / `201 Created` |
+| `POST` | `/api/v1/review-cycles/{id}/evidence/upload` | Upload and parse document directly into a review cycle | `201 Created`, `413`, `422` |
+| `GET` | `/api/v1/review-cycles/{id}/evidence/completeness` | Cycle evidence completeness score, source distribution, and explicit gap detection | `200 OK` or `404 Not Found` |
 
 ### Foundational Entities (Phase 2)
 | Method | Endpoint | Description | Return Status |

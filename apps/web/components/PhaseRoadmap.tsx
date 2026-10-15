@@ -38,8 +38,8 @@ export function PhaseRoadmap() {
     {
       phase: "Phase 4",
       name: "Evidence Processing & Retrieval",
-      status: "upcoming",
-      summary: "Safe document parsing (PDF, DOCX, TXT), scoped retrieval, employee isolation.",
+      status: "completed",
+      summary: "Safe document parsing (PDF, DOCX, TXT, CSV), streaming uploads, scoped retrieval, employee isolation, gap analysis.",
     },
     {
       phase: "Phase 5",

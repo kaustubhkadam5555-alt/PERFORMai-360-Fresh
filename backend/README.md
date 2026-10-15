@@ -18,20 +18,21 @@ backend/
 │   │       │   ├── review_cycles.py  # Review cycle workflow & nested endpoints
 │   │       │   ├── feedback.py       # 360-degree feedback management
 │   │       │   ├── goals.py          # Goal tracking & progress management
-│   │       │   └── evidence.py       # Evidence metadata & access policy management
+│   │       │   └── evidence.py       # Evidence upload, retrieval & access policy management
 │   │       └── router.py             # API v1 router aggregator
 │   ├── core/
-│   │   └── config.py                 # Pydantic Settings configuration
+│   │   └── config.py                 # Pydantic Settings configuration (upload limits, storage dir)
 │   ├── db/
 │   │   ├── base.py                   # SQLAlchemy 2.0 Base, naming conventions & mixins
 │   │   └── session.py                # Async SQLAlchemy engine, session generator & health probe
 │   ├── models/                       # SQLAlchemy 2.0 ORM domain entities (13 PRD models)
+│   ├── parsers/                      # Safe document parsers (PDF, DOCX, TXT, CSV) & magic signature validation
 │   ├── schemas/                      # Pydantic v2 validation & serialization schemas
 │   ├── repositories/                 # Repository layer (DB queries & mutations)
-│   ├── services/                     # Business logic, lifecycle & validation services
+│   ├── services/                     # Business logic, lifecycle, parsing & evidence services
 │   └── main.py                       # FastAPI application entry point, CORS & lifespan
 ├── migrations/                       # Alembic async migration scripts & env.py
-├── tests/                            # Pytest test suite (31 automated tests, 100% pass)
+├── tests/                            # Pytest test suite (64 automated tests, 100% pass)
 ├── alembic.ini                       # Alembic database migration configuration
 └── pyproject.toml                    # Dependency specifications & tool configs
 ```
@@ -114,16 +115,20 @@ ruff format . --check
 | `GET` | `/api/v1/review-cycles/{cycle_id}/goals` | List goals nested under a review cycle |
 | `POST` | `/api/v1/review-cycles/{cycle_id}/goals` | Create goal directly under a review cycle |
 
-### Evidence Management (Phase 3)
+### Evidence Management & Processing (Phase 3 & Phase 4)
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
 | `GET` | `/api/v1/evidence` | List evidence (filtering: `cycle_id`, `employee_id`, `source_type`, `start_date`, `end_date`, access policies) |
 | `POST` | `/api/v1/evidence` | Register evidence metadata (source types: `pr`, `commit`, `design_doc`, `ticket`, `document_upload`) |
-| `GET` | `/api/v1/evidence/{id}` | Retrieve evidence by ID (enforces access policy: `internal`, `manager_only`, `restricted`) |
+| `POST` | `/api/v1/evidence/upload` | Multipart file upload (PDF, DOCX, TXT, CSV), magic signature validation, safe text parsing |
+| `GET` | `/api/v1/evidence/{id}` | Retrieve evidence by ID (enforces access policy: `internal`, `manager_only`, `restricted`, `confidential`) |
+| `GET` | `/api/v1/evidence/{id}/content` | Download or view stored document file (enforces cycle, employee, and role permissions) |
 | `PATCH` | `/api/v1/evidence/{id}` | Update evidence title, source type, metadata, or access policy |
-| `DELETE` | `/api/v1/evidence/{id}` | Delete evidence record |
+| `DELETE` | `/api/v1/evidence/{id}` | Delete evidence record and unlink physical storage |
 | `GET` | `/api/v1/review-cycles/{cycle_id}/evidence` | List evidence nested under a review cycle |
 | `POST` | `/api/v1/review-cycles/{cycle_id}/evidence` | Register evidence directly under a review cycle |
+| `POST` | `/api/v1/review-cycles/{cycle_id}/evidence/upload` | Upload and parse document directly into a review cycle |
+| `GET` | `/api/v1/review-cycles/{cycle_id}/evidence/completeness` | Cycle evidence completeness score, source distribution, and explicit gap detection |
 
 ### Foundational Entities (Phase 2)
 | Method | Endpoint | Description |

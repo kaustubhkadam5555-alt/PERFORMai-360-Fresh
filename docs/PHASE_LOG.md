@@ -297,9 +297,76 @@ The following runtime versions were verified directly on the local macOS host:
 - **Physical Document Storage & Parsing:** Evidence management in Phase 3 registers and tracks metadata, access policies, and storage references safely without unrestricted file uploads or third-party VCS integrations (GitHub/Jira APIs are deferred to Phase 4).
 
 ### 5. Next Steps (Phase 4)
+- Implement Evidence Processing and Scoped Retrieval. *(Completed)*
+
+---
+
+## Phase 4 — Evidence Processing and Scoped Retrieval
+
+**Date:** 2026-10-16
+**Status:** Completed & Verified (Stage B)
+**Lead Agent:** Antigravity
+
+### 1. Phase Objectives & Scope
+- Implement secure document uploads supporting PDF, DOCX, TXT, and CSV.
+- Enforce magic byte file signature validation (no reliance on client filename or MIME type alone) and reject executables (`MZ`, `\x7fELF`, Mach-O, shebangs).
+- Stream file uploads with a strict 10 MB limit (`MAX_UPLOAD_SIZE_BYTES`) to avoid unbounded memory exhaustion.
+- Enforce path traversal protection (`os.path.basename` filename sanitization, whitelisted extensions, and strict upload root containment).
+- Implement safe text extraction parsers:
+  - `TextParser`: Strips null and non-printable control bytes, supports UTF-8/Latin-1 fallback, caps text at 50,000 characters.
+  - `CSVParser`: Sanitizes formula injection (`=`, `+`, `-`, `@`, `\t`, `\r` prefixes neutralized with `'`), row limit (5,000), column limit (50).
+  - `PDFParser`: `pypdf`-based extractor with encryption check, page limit (100 pages), character cap.
+  - `DOCXParser`: `python-docx`-based paragraph and table extractor with paragraph limit (2,000) and character cap.
+- Implement evidence content retrieval (`GET /api/v1/evidence/{evidence_id}/content`) with file streaming / attachment support.
+- Enforce strict review-cycle and cross-employee scoping at the service/repository boundary (preventing resource enumeration by returning 404 for unauthorized access).
+- Implement cycle-level evidence completeness metrics (`GET /api/v1/review-cycles/{cycle_id}/evidence/completeness`):
+  - Total evidence count, source distribution, date span coverage.
+  - Explicit gap reporting: missing code/PR delivery records, missing technical design docs/RFCs, out-of-period evidence.
+  - Recency concentration risk detection (evidence concentrated exclusively in the final 25% of the review period).
+  - Normalized completeness score (0.0 to 1.0).
+
+### 2. Deliverables & Modified Files
+| File Path | Action | Description |
+| :--- | :--- | :--- |
+| [`backend/pyproject.toml`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/pyproject.toml) | Modified | Added `python-multipart`, `pypdf`, `python-docx` dependencies and setuptools package discovery. |
+| [`backend/app/core/config.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/core/config.py) | Modified | Configured `UPLOAD_DIR` and `MAX_UPLOAD_SIZE_BYTES` (10 MB). |
+| [`backend/app/parsers/base.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/parsers/base.py) | Created | Abstract `DocumentParser` and dataclass `ParsedDocument`. |
+| [`backend/app/parsers/text_parser.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/parsers/text_parser.py) | Created | Safe UTF-8/Latin-1 text parser with control byte stripping. |
+| [`backend/app/parsers/csv_parser.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/parsers/csv_parser.py) | Created | Safe CSV parser with formula injection sanitization. |
+| [`backend/app/parsers/pdf_parser.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/parsers/pdf_parser.py) | Created | `pypdf` extractor with encryption rejection and page limits. |
+| [`backend/app/parsers/docx_parser.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/parsers/docx_parser.py) | Created | `python-docx` extractor with paragraph and table limits. |
+| [`backend/app/parsers/factory.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/parsers/factory.py) | Created | Magic byte format detector and binary executable blocker. |
+| [`backend/app/parsers/__init__.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/parsers/__init__.py) | Created | Package exports for parsers. |
+| [`backend/app/schemas/evidence.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/evidence.py) | Modified | Added `EvidenceCompletenessResponse` and traversal validation. |
+| [`backend/app/schemas/__init__.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/__init__.py) | Modified | Re-exported `EvidenceCompletenessResponse`. |
+| [`backend/app/repositories/evidence_repository.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/repositories/evidence_repository.py) | Modified | Added `list_all_for_cycle` and `get_by_id_scoped`. |
+| [`backend/app/services/evidence_service.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/services/evidence_service.py) | Modified | Implemented streaming upload, safe disk write, failure cleanup, content info, and completeness reporting. |
+| [`backend/app/api/v1/endpoints/evidence.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/endpoints/evidence.py) | Modified | Added `POST /upload` (multipart) and `GET /{id}/content` (file stream/download). |
+| [`backend/app/api/v1/endpoints/review_cycles.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/endpoints/review_cycles.py) | Modified | Added `POST /{cycle_id}/evidence/upload` and `GET /{cycle_id}/evidence/completeness`. |
+| [`backend/tests/test_parsers.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_parsers.py) | Created | 20 unit tests for parsers, formula injection, and signature checks. |
+| [`backend/tests/test_evidence_upload.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_evidence_upload.py) | Created | 9 integration tests for uploads, size limits, format checks, and path traversal defense. |
+| [`backend/tests/test_scoped_retrieval.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_scoped_retrieval.py) | Created | 4 integration tests for content retrieval, cross-employee isolation, and completeness reporting. |
+| [`apps/web/components/PhaseRoadmap.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/components/PhaseRoadmap.tsx) | Modified | Marked Phase 4 completed in frontend roadmap. |
+| [`backend/README.md`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/README.md) | Modified | Documented parser module, new endpoints, and updated test suite count. |
+| [`README.md`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/README.md) | Modified | Updated project README with Phase 4 endpoints and test count. |
+| [`docs/ARCHITECTURE.md`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/docs/ARCHITECTURE.md) | Modified | Updated document status to Phase 4 completed. |
+
+### 3. Verification Commands & Actual Results
+| Check | Command Executed | Actual Result |
+| :--- | :--- | :--- |
+| **Backend Unit & Integration Tests** | `backend/.venv/bin/pytest backend/tests -v` | **64 passed in 0.99s** (100% pass) |
+| **Backend Lint & Format** | `backend/.venv/bin/ruff check backend && backend/.venv/bin/ruff format backend --check` | **All checks passed!** 72 files clean |
+| **Alembic Head Verification** | `cd backend && .venv/bin/alembic current && .venv/bin/alembic heads` | `8884fdc13f66 (head)` matches current DB state |
+| **Frontend Linting** | `cd apps/web && npm run lint` | **0 errors, 0 warnings** (ESLint) |
+| **Frontend Production Build** | `cd apps/web && npm run build` | **Compiled successfully in 243ms** (Turbopack) |
+| **Live Health Probes** | `curl http://127.0.0.1:8000/health` & `/api/v1/health` | **`{"status":"ok","app":"PERFORMai-360","version":"0.1.0"}`** |
+
+### 4. Known Limitations & Deferred Work
+- **Live VCS APIs (GitHub/Jira):** Third-party live VCS integrations and external token authentications are not included in Phase 4; evidence is ingested safely via direct document upload and metadata registration.
+- **AI Analysis & Scoring:** Phase 4 strictly scopes and retrieves evidence without automated AI synthesis, scoring, or agent loops (deferred to Phase 5–7).
+
+### 5. Next Steps (Phase 5)
 Upon student review and approval:
-- Implement Evidence Processing and Scoped Retrieval.
-- Implement safe parsers for selected file formats (PDF, DOCX, TXT, CSV).
-- Implement period-aware and permission-aware evidence retrieval.
-- Build indicators for evidence completeness.
-- Add tests proving employee evidence isolation.
+- Implement Single-Pass AI Analysis & Grounded Report Draft.
+- Implement provider-neutral LLM adapter (Mock, OpenAI, Anthropic, Ollama).
+- Implement structured contribution extraction grounded strictly in verified `evidence_ids`.

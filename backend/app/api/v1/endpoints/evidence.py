@@ -2,10 +2,12 @@ import uuid
 from datetime import date
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
+from app.models.evidence import EvidenceAccessPolicy
 from app.schemas.evidence import EvidenceCreate, EvidenceResponse, EvidenceUpdate
 from app.services.evidence_service import EvidenceService
 
@@ -60,6 +62,39 @@ async def register_evidence(
     return await service.create_evidence(cycle_id=evidence_in.cycle_id, evidence_in=evidence_in)
 
 
+@router.post(
+    "/upload",
+    response_model=EvidenceResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload and parse an evidence document",
+)
+async def upload_evidence(
+    file: UploadFile = File(...),
+    cycle_id: uuid.UUID = Form(..., description="Target review cycle ID"),
+    employee_id: Optional[uuid.UUID] = Form(default=None, description="Optional employee ID for verification"),
+    title: Optional[str] = Form(default=None, description="Custom title for evidence"),
+    source_type: Optional[str] = Form(default=None, description="Optional source type override"),
+    access_policy: str = Form(default=EvidenceAccessPolicy.INTERNAL.value, description="Access policy"),
+    source_date: Optional[date] = Form(default=None, description="Date of document or activity"),
+    uploader_id: Optional[uuid.UUID] = Form(default=None, description="User ID of uploader"),
+    viewer_id: Optional[uuid.UUID] = Query(default=None),
+    x_viewer_id: Optional[uuid.UUID] = Header(default=None, alias="X-Viewer-Id"),
+    db: AsyncSession = Depends(get_db),
+) -> EvidenceResponse:
+    effective_uploader_id = uploader_id or viewer_id or x_viewer_id
+    service = EvidenceService(db)
+    return await service.upload_and_process_file(
+        cycle_id=cycle_id,
+        upload_file=file,
+        title=title,
+        source_type=source_type,
+        access_policy=access_policy,
+        source_date=source_date,
+        uploader_id=effective_uploader_id,
+        employee_id=employee_id,
+    )
+
+
 @router.get("/{evidence_id}", response_model=EvidenceResponse, summary="Get evidence by ID")
 async def get_evidence(
     evidence_id: uuid.UUID,
@@ -72,6 +107,29 @@ async def get_evidence(
     service = EvidenceService(db)
     return await service.get_evidence_by_id(
         evidence_id, viewer_id=viewer_id or x_viewer_id, viewer_role=viewer_role or x_viewer_role
+    )
+
+
+@router.get("/{evidence_id}/content", summary="Download or stream stored evidence document content")
+async def get_evidence_content(
+    evidence_id: uuid.UUID,
+    download: bool = Query(default=True, description="Download file as attachment or view inline"),
+    viewer_id: Optional[uuid.UUID] = Query(default=None),
+    viewer_role: Optional[str] = Query(default=None),
+    x_viewer_id: Optional[uuid.UUID] = Header(default=None, alias="X-Viewer-Id"),
+    x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
+    db: AsyncSession = Depends(get_db),
+) -> FileResponse:
+    service = EvidenceService(db)
+    file_path, filename, mime_type = await service.get_evidence_content_info(
+        evidence_id=evidence_id,
+        viewer_id=viewer_id or x_viewer_id,
+        viewer_role=viewer_role or x_viewer_role,
+    )
+    return FileResponse(
+        path=file_path,
+        media_type=mime_type or "application/octet-stream",
+        filename=filename if download else None,
     )
 
 

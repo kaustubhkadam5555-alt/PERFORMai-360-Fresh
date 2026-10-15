@@ -49,5 +49,9 @@ class Settings(BaseSettings):
     # LLM Settings
     LLM_PROVIDER: str = "mock"
 
+    # Evidence Upload & Processing Settings
+    UPLOAD_DIR: str = "uploads"
+    MAX_UPLOAD_SIZE_BYTES: int = 10 * 1024 * 1024  # 10 MB limit
+
 
 settings = Settings()

@@ -1,5 +1,6 @@
 from app.schemas.evidence import (
     EvidenceBase,
+    EvidenceCompletenessResponse,
     EvidenceCreate,
     EvidenceResponse,
     EvidenceUpdate,
@@ -59,4 +60,5 @@ __all__ = [
     "EvidenceCreate",
     "EvidenceUpdate",
     "EvidenceResponse",
+    "EvidenceCompletenessResponse",
 ]

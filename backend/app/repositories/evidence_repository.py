@@ -81,3 +81,21 @@ class EvidenceRepository:
     async def delete(db: AsyncSession, db_evidence: Evidence) -> None:
         await db.delete(db_evidence)
         await db.commit()
+
+    @staticmethod
+    async def list_all_for_cycle(db: AsyncSession, cycle_id: uuid.UUID) -> List[Evidence]:
+        query = select(Evidence).where(Evidence.cycle_id == cycle_id).order_by(Evidence.source_date.asc().nullslast())
+        result = await db.execute(query)
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def get_by_id_scoped(
+        db: AsyncSession, evidence_id: uuid.UUID, cycle_id: uuid.UUID, employee_id: Optional[uuid.UUID] = None
+    ) -> Optional[Evidence]:
+        query = select(Evidence).where(Evidence.id == evidence_id, Evidence.cycle_id == cycle_id)
+        if employee_id:
+            query = query.join(ReviewCycle, Evidence.cycle_id == ReviewCycle.id).where(
+                ReviewCycle.employee_id == employee_id
+            )
+        result = await db.execute(query)
+        return result.scalars().first()

@@ -2,11 +2,16 @@ import uuid
 from datetime import date
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Header, Query, status
+from fastapi import APIRouter, Depends, File, Form, Header, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.schemas.evidence import EvidenceCreate, EvidenceResponse
+from app.models.evidence import EvidenceAccessPolicy
+from app.schemas.evidence import (
+    EvidenceCompletenessResponse,
+    EvidenceCreate,
+    EvidenceResponse,
+)
 from app.schemas.feedback import FeedbackCreate, FeedbackResponse
 from app.schemas.goal import GoalCreate, GoalResponse
 from app.schemas.review_cycle import (
@@ -198,3 +203,57 @@ async def register_cycle_evidence(
 ) -> EvidenceResponse:
     service = EvidenceService(db)
     return await service.create_evidence(cycle_id=cycle_id, evidence_in=evidence_in)
+
+
+@router.post(
+    "/{cycle_id}/evidence/upload",
+    response_model=EvidenceResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload and parse an evidence document for a review cycle",
+)
+async def upload_cycle_evidence(
+    cycle_id: uuid.UUID,
+    file: UploadFile = File(...),
+    employee_id: Optional[uuid.UUID] = Form(default=None, description="Optional employee ID for verification"),
+    title: Optional[str] = Form(default=None, description="Custom title for evidence"),
+    source_type: Optional[str] = Form(default=None, description="Optional source type override"),
+    access_policy: str = Form(default=EvidenceAccessPolicy.INTERNAL.value, description="Access policy"),
+    source_date: Optional[date] = Form(default=None, description="Date of document or activity"),
+    uploader_id: Optional[uuid.UUID] = Form(default=None, description="User ID of uploader"),
+    viewer_id: Optional[uuid.UUID] = Query(default=None),
+    x_viewer_id: Optional[uuid.UUID] = Header(default=None, alias="X-Viewer-Id"),
+    db: AsyncSession = Depends(get_db),
+) -> EvidenceResponse:
+    effective_uploader_id = uploader_id or viewer_id or x_viewer_id
+    service = EvidenceService(db)
+    return await service.upload_and_process_file(
+        cycle_id=cycle_id,
+        upload_file=file,
+        title=title,
+        source_type=source_type,
+        access_policy=access_policy,
+        source_date=source_date,
+        uploader_id=effective_uploader_id,
+        employee_id=employee_id,
+    )
+
+
+@router.get(
+    "/{cycle_id}/evidence/completeness",
+    response_model=EvidenceCompletenessResponse,
+    summary="Get cycle-level evidence completeness metrics and gap analysis",
+)
+async def get_cycle_evidence_completeness(
+    cycle_id: uuid.UUID,
+    viewer_id: Optional[uuid.UUID] = Query(default=None),
+    viewer_role: Optional[str] = Query(default=None),
+    x_viewer_id: Optional[uuid.UUID] = Header(default=None, alias="X-Viewer-Id"),
+    x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
+    db: AsyncSession = Depends(get_db),
+) -> EvidenceCompletenessResponse:
+    service = EvidenceService(db)
+    return await service.get_cycle_evidence_completeness(
+        cycle_id=cycle_id,
+        viewer_id=viewer_id or x_viewer_id,
+        viewer_role=viewer_role or x_viewer_role,
+    )

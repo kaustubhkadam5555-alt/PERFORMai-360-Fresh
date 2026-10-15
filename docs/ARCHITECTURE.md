@@ -1,7 +1,7 @@
 # PERFORMai-360: System Architecture Specification
 
 **Project Title:** PERFORMai-360: AI-Driven Bias-Aware 360° Performance Evaluation for Software Engineering Teams
-**Document Status:** Phase 3 Core Review Workflow Implemented
+**Document Status:** Phase 4 Evidence Processing and Scoped Retrieval Implemented
 **Target Environment:** macOS Local Development, Docker Compose, Python 3.14+, Node.js v26+
 
 ---
@@ -257,7 +257,7 @@ Development is executed sequentially across twelve controlled phases:
 - **Phase 1:** Application Skeleton & Local Developer Environment *(Completed)*
 - **Phase 2:** Core Database Models & Persistence *(Completed)*
 - **Phase 3:** Core Review Workflow (Cycles, Feedback, Goals, Evidence) *(Completed)*
-- **Phase 4:** Evidence Processing & Scoped Retrieval
+- **Phase 4:** Evidence Processing & Scoped Retrieval *(Completed)*
 - **Phase 5:** Single-Pass AI Analysis & Grounded Report Draft
 - **Phase 6:** Deterministic Bias & Evidence-Quality Audit Engine
 - **Phase 7:** LangGraph Multi-Agent Orchestration
