@@ -1,3 +1,21 @@
+from app.schemas.evidence import (
+    EvidenceBase,
+    EvidenceCreate,
+    EvidenceResponse,
+    EvidenceUpdate,
+)
+from app.schemas.feedback import (
+    FeedbackBase,
+    FeedbackCreate,
+    FeedbackResponse,
+    FeedbackUpdate,
+)
+from app.schemas.goal import (
+    GoalBase,
+    GoalCreate,
+    GoalResponse,
+    GoalUpdate,
+)
 from app.schemas.review_cycle import (
     ReviewCycleBase,
     ReviewCycleCreate,
@@ -29,4 +47,16 @@ __all__ = [
     "ReviewCycleCreate",
     "ReviewCycleUpdate",
     "ReviewCycleResponse",
+    "FeedbackBase",
+    "FeedbackCreate",
+    "FeedbackUpdate",
+    "FeedbackResponse",
+    "GoalBase",
+    "GoalCreate",
+    "GoalUpdate",
+    "GoalResponse",
+    "EvidenceBase",
+    "EvidenceCreate",
+    "EvidenceUpdate",
+    "EvidenceResponse",
 ]

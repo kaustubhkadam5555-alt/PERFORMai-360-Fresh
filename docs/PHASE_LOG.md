@@ -136,7 +136,7 @@ The following runtime versions were verified directly on the local macOS host:
 ## Phase 2 — Core Database Models and Persistence
 
 **Date:** 2026-10-16
-**Status:** Completed (Awaiting student/user review and approval before starting Phase 3)
+**Status:** Completed & Committed (`32db7e8`)
 **Lead Agent:** Antigravity
 
 ### 1. Phase Objectives & Scope
@@ -221,9 +221,85 @@ The following runtime versions were verified directly on the local macOS host:
 ### 5. Known Issues & Workarounds
 - None. All 13 domain models, migration history, schemas, repositories, services, and tests are verified and operational.
 
-### 6. Next Steps (Phase 3)
+---
+
+## Phase 3 — Core Review Workflow
+
+**Date:** 2026-10-16
+**Status:** Completed (Awaiting student/user review and approval before starting Phase 4)
+**Lead Agent:** Antigravity
+
+### 1. Phase Objectives & Scope
+- Implement the core review workflow for PERFORMai-360 across four pillars: Review Cycles, 360-Degree Feedback, Goal Tracking, and Evidence Management.
+- **Review Cycle Lifecycle Management:**
+  - Implemented state machine transitions: `draft` -> `active` (or `open`) -> `in_review` -> `completed` -> `archived`.
+  - Enforced invalid transition rejection with HTTP 409 Conflict.
+  - Enforced review period validation (`period_end >= period_start`) both on creation and updates with HTTP 422.
+  - Enforced deletion restrictions (permitted only for `draft` cycles).
+- **360-Degree Feedback Management:**
+  - Implemented feedback submissions for `self`, `peer`, and `manager` feedback.
+  - Enforced cycle state requirement: submissions only accepted for active cycles (`active`, `open`, `collecting_feedback`); rejected with HTTP 409 Conflict if cycle is inactive.
+  - Validated author-subject relationship rules: self-feedback requires `author_id == subject_employee_id`; peer/manager feedback requires `author_id != subject_employee_id` (HTTP 422).
+  - Enforced visibility policy (`shared`, `manager_only`, `private`). Unauthorized queries return HTTP 404 to avoid disclosure leaks.
+- **Goal Progress Tracking:**
+  - Implemented goal CRUD, status progression (`not_started`, `in_progress`, `completed`, `achieved`, `partially_achieved`, `missed`, `blocked`, `cancelled`), and self-assessment outcome notes.
+  - Decoupled goal tracking from performance evaluation scoring (no automatic scoring).
+- **Evidence Management:**
+  - Implemented evidence metadata registration for pull requests, commits, design docs, tickets, and document uploads.
+  - Sanitized storage paths to prevent directory traversal attacks (HTTP 422).
+  - Enforced access policies (`internal`, `manager_only`, `restricted`, `confidential`) with deterministic ordering.
+- Provide comprehensive automated tests, update documentation, and verify build health.
+
+### 2. Deliverables & Modified Files
+| File Path | Action | Description |
+| :--- | :--- | :--- |
+| [`backend/app/models/review_cycle.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/review_cycle.py) | Modified | Added canonical `active`, `in_review`, and `completed` enum values to `ReviewCycleStatus`. |
+| [`backend/app/models/evidence.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/evidence.py) | Modified | Added PR, commit, design_doc, and document_upload source types and confidential policy. |
+| [`backend/app/models/goal.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/models/goal.py) | Modified | Added evaluation status values (`achieved`, `partially_achieved`, `missed`) to `GoalStatus`. |
+| [`backend/app/schemas/feedback.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/feedback.py) | Created | Pydantic v2 schemas: `FeedbackCreate`, `FeedbackUpdate`, `FeedbackResponse`, with author-subject validators. |
+| [`backend/app/schemas/goal.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/goal.py) | Created | Pydantic v2 schemas: `GoalCreate`, `GoalUpdate`, `GoalResponse`, with status validation. |
+| [`backend/app/schemas/evidence.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/evidence.py) | Created | Pydantic v2 schemas: `EvidenceCreate`, `EvidenceUpdate`, `EvidenceResponse`, with storage traversal prevention. |
+| [`backend/app/schemas/__init__.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/__init__.py) | Modified | Re-exported all new feedback, goal, and evidence schemas. |
+| [`backend/app/repositories/feedback_repository.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/repositories/feedback_repository.py) | Created | Repository for querying, creating, updating, and deleting feedback. |
+| [`backend/app/repositories/goal_repository.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/repositories/goal_repository.py) | Created | Repository for querying, creating, updating, and deleting goals with employee joins. |
+| [`backend/app/repositories/evidence_repository.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/repositories/evidence_repository.py) | Created | Repository for querying, creating, updating, and deleting evidence with deterministic ordering. |
+| [`backend/app/repositories/review_cycle_repository.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/repositories/review_cycle_repository.py) | Modified | Added `delete` method for draft cycles. |
+| [`backend/app/services/review_cycle_service.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/services/review_cycle_service.py) | Modified | Enforced lifecycle transition graph, period date validation, and draft-only deletion. |
+| [`backend/app/services/feedback_service.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/services/feedback_service.py) | Created | Enforced active cycle submission rule, author-subject checks, and visibility protection. |
+| [`backend/app/services/goal_service.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/services/goal_service.py) | Created | Domain service for goal management and employee validation. |
+| [`backend/app/services/evidence_service.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/services/evidence_service.py) | Created | Domain service for evidence registration and access policy enforcement. |
+| [`backend/app/api/v1/endpoints/feedback.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/endpoints/feedback.py) | Created | Top-level feedback collection & item endpoints (`/api/v1/feedback`). |
+| [`backend/app/api/v1/endpoints/goals.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/endpoints/goals.py) | Created | Top-level goal collection & item endpoints (`/api/v1/goals`). |
+| [`backend/app/api/v1/endpoints/evidence.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/endpoints/evidence.py) | Created | Top-level evidence collection & item endpoints (`/api/v1/evidence`). |
+| [`backend/app/api/v1/endpoints/review_cycles.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/endpoints/review_cycles.py) | Modified | Added `DELETE /{id}` and nested endpoints for feedback, goals, and evidence. |
+| [`backend/app/api/v1/router.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/router.py) | Modified | Mounted feedback, goals, and evidence routers. |
+| [`backend/tests/test_api_review_cycles_lifecycle.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_api_review_cycles_lifecycle.py) | Created | 4 tests for valid/invalid transitions, period validation on update, and deletion rules. |
+| [`backend/tests/test_api_feedback.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_api_feedback.py) | Created | 4 tests for active cycle submission rule, author-subject relationships, missing refs, and visibility rules. |
+| [`backend/tests/test_api_goals.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_api_goals.py) | Created | 2 tests for goal CRUD, listing by employee/cycle, updating outcome notes, and validation. |
+| [`backend/tests/test_api_evidence.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_api_evidence.py) | Created | 2 tests for registration, retrieval, filtering, path traversal sanitization, and access policy rules. |
+| [`apps/web/components/PhaseRoadmap.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/components/PhaseRoadmap.tsx) | Modified | Updated roadmap status to mark Phase 3 completed. |
+| [`backend/README.md`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/README.md) | Modified | Documented all new API endpoints, request schemas, and test execution details. |
+| [`README.md`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/README.md) | Modified | Updated project roadmap and comprehensive API endpoint inventory. |
+| [`docs/ARCHITECTURE.md`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/docs/ARCHITECTURE.md) | Modified | Updated document status to Phase 3 completed. |
+
+### 3. Verification Commands & Actual Results
+| Check | Command Executed | Actual Result |
+| :--- | :--- | :--- |
+| **Backend Unit & API Tests** | `backend/.venv/bin/pytest backend/tests -v` | **31 passed in 0.66s** (100% pass, 0 warnings) |
+| **Backend Lint & Format** | `backend/.venv/bin/ruff format backend --check && backend/.venv/bin/ruff check backend` | **All checks passed!** 62 files clean |
+| **Alembic Head Verification** | `cd backend && .venv/bin/alembic current && .venv/bin/alembic heads` | `8884fdc13f66 (head)` matches current DB state |
+| **Frontend Linting** | `cd apps/web && npm run lint` | **0 errors, 0 warnings** (ESLint) |
+| **Frontend Production Build** | `cd apps/web && npm run build` | **Compiled successfully in 113ms** (Turbopack) |
+| **Live Health Probes** | `curl http://127.0.0.1:8000/health/ready` | **`{"status":"ready","database":"connected","llm_provider":"mock"}`** |
+
+### 4. Known Limitations & Deferred Work
+- **Authentication & Server-Side JWT:** Full JWT session authentication is scheduled for later phases. Currently, viewer context (`viewer_id`, `viewer_role`) is passed via parameters/headers for domain-level authorization checks.
+- **Physical Document Storage & Parsing:** Evidence management in Phase 3 registers and tracks metadata, access policies, and storage references safely without unrestricted file uploads or third-party VCS integrations (GitHub/Jira APIs are deferred to Phase 4).
+
+### 5. Next Steps (Phase 4)
 Upon student review and approval:
-- Implement Core Review Workflow endpoints for feedback submissions (self, peer, manager).
-- Implement goal setting, tracking, and metric evaluation.
-- Implement evidence record submission and scoped attachment.
-- Enforce review cycle lifecycle transitions (`draft` -> `active` -> `in_review` -> `completed` -> `archived`).
+- Implement Evidence Processing and Scoped Retrieval.
+- Implement safe parsers for selected file formats (PDF, DOCX, TXT, CSV).
+- Implement period-aware and permission-aware evidence retrieval.
+- Build indicators for evidence completeness.
+- Add tests proving employee evidence isolation.

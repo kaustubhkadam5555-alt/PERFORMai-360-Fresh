@@ -32,8 +32,8 @@ export function PhaseRoadmap() {
     {
       phase: "Phase 3",
       name: "Core Review Workflow",
-      status: "upcoming",
-      summary: "Review-cycle state machine, self/peer/manager feedback forms, goal tracking.",
+      status: "completed",
+      summary: "Review-cycle state machine, self/peer/manager feedback, goal progress tracking, evidence metadata.",
     },
     {
       phase: "Phase 4",

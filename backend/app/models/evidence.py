@@ -15,16 +15,22 @@ if TYPE_CHECKING:
 
 class EvidenceSourceType(str, enum.Enum):
     DOCUMENT = "document"
+    DOCUMENT_UPLOAD = "document_upload"
     NOTE = "note"
     METRIC = "metric"
     TICKET = "ticket"
+    COMMIT = "commit"
     COMMIT_SUMMARY = "commit_summary"
+    PULL_REQUEST = "pull_request"
+    PR = "pr"
+    DESIGN_DOC = "design_doc"
 
 
 class EvidenceAccessPolicy(str, enum.Enum):
     INTERNAL = "internal"
     MANAGER_ONLY = "manager_only"
     RESTRICTED = "restricted"
+    CONFIDENTIAL = "confidential"
 
 
 class Evidence(Base, UUIDMixin, TimestampMixin):

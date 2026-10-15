@@ -22,12 +22,15 @@ if TYPE_CHECKING:
 
 class ReviewCycleStatus(str, enum.Enum):
     DRAFT = "draft"
+    ACTIVE = "active"
     OPEN = "open"
     COLLECTING_FEEDBACK = "collecting_feedback"
+    IN_REVIEW = "in_review"
     ANALYSIS_PENDING = "analysis_pending"
     DRAFT_REPORT = "draft_report"
     CHANGES_REQUESTED = "changes_requested"
     APPROVED = "approved"
+    COMPLETED = "completed"
     FINALIZED = "finalized"
     ARCHIVED = "archived"
 

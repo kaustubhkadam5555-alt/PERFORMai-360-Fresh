@@ -54,3 +54,8 @@ class ReviewCycleRepository:
         await db.commit()
         await db.refresh(db_cycle)
         return db_cycle
+
+    @staticmethod
+    async def delete(db: AsyncSession, db_cycle: ReviewCycle) -> None:
+        await db.delete(db_cycle)
+        await db.commit()

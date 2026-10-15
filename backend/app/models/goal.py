@@ -16,6 +16,9 @@ class GoalStatus(str, enum.Enum):
     NOT_STARTED = "not_started"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
+    ACHIEVED = "achieved"
+    PARTIALLY_ACHIEVED = "partially_achieved"
+    MISSED = "missed"
     BLOCKED = "blocked"
     CANCELLED = "cancelled"
 

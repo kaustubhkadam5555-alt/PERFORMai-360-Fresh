@@ -107,7 +107,7 @@ Development proceeds strictly in sequential phases:
 - [x] **Phase 0 — Repository and Planning Baseline** *(Completed)*
 - [x] **Phase 1 — Application Foundation & Local Developer Environment** *(Completed)*
 - [x] **Phase 2 — Core Database Models and Persistence** *(Completed)*
-- [ ] **Phase 3 — Core Review Workflow**
+- [x] **Phase 3 — Core Review Workflow** *(Completed)*
 - [ ] **Phase 4 — Evidence Processing & Retrieval**
 - [ ] **Phase 5 — Single-Pass AI Analysis & Grounded Report Draft**
 - [ ] **Phase 6 — Bias & Evidence-Quality Audit Engine**
@@ -152,7 +152,7 @@ pip install -e ".[dev]"
 # Run database migrations
 alembic upgrade head
 
-# Run automated tests
+# Run automated tests (31 tests)
 pytest tests -v
 
 # Run code linter and format check
@@ -194,7 +194,34 @@ npm run dev
 | `GET` | `/api/v1/health/ready`| Mounted v1 readiness probe | `200 OK` or `503` |
 | `GET` | `/docs` | Interactive Swagger API documentation | `200 OK` |
 
-### Core Entities (Phase 2 CRUD)
+### Core Review Workflow (Phase 3)
+| Method | Endpoint | Description | Return Status |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/review-cycles` | List review cycles (filtering: `employee_id`, `status`) | `200 OK` |
+| `POST` | `/api/v1/review-cycles` | Create review cycle (date validation: `period_end >= period_start`) | `201 Created` |
+| `GET` | `/api/v1/review-cycles/{id}` | Fetch review cycle by ID | `200 OK` or `404 Not Found` |
+| `PATCH` | `/api/v1/review-cycles/{id}` | Update cycle fields & lifecycle transitions (`draft` → `active` → `in_review` → `completed` → `archived`) | `200 OK`, `409 Conflict`, `422` |
+| `DELETE` | `/api/v1/review-cycles/{id}` | Delete review cycle (permitted only in `draft` status) | `204 No Content` or `409 Conflict` |
+| `GET` | `/api/v1/feedback` | List feedback (filtering & visibility checks) | `200 OK` |
+| `POST` | `/api/v1/feedback` | Submit feedback (`self`, `peer`, `manager`; requires active cycle) | `201 Created`, `409 Conflict`, `422` |
+| `GET` | `/api/v1/feedback/{id}` | Fetch feedback by ID (enforces visibility policy) | `200 OK` or `404 Not Found` |
+| `PATCH` | `/api/v1/feedback/{id}` | Update feedback content or visibility | `200 OK` |
+| `DELETE` | `/api/v1/feedback/{id}` | Delete feedback record | `204 No Content` |
+| `GET/POST`| `/api/v1/review-cycles/{id}/feedback` | List or submit feedback directly for a cycle | `200 OK` / `201 Created` |
+| `GET` | `/api/v1/goals` | List goals (filtering: `cycle_id`, `employee_id`, `status`) | `200 OK` |
+| `POST` | `/api/v1/goals` | Create goal | `201 Created` or `422` |
+| `GET` | `/api/v1/goals/{id}` | Fetch goal by ID | `200 OK` or `404 Not Found` |
+| `PATCH` | `/api/v1/goals/{id}` | Update goal status, targets, and self-assessment notes | `200 OK` |
+| `DELETE` | `/api/v1/goals/{id}` | Delete goal record | `204 No Content` |
+| `GET/POST`| `/api/v1/review-cycles/{id}/goals` | List or create goals directly under a cycle | `200 OK` / `201 Created` |
+| `GET` | `/api/v1/evidence` | List evidence (filtering: `cycle_id`, `source_type`, dates) | `200 OK` |
+| `POST` | `/api/v1/evidence` | Register evidence metadata (`pr`, `commit`, `design_doc`, `ticket`, `document_upload`) | `201 Created`, `422` |
+| `GET` | `/api/v1/evidence/{id}` | Fetch evidence by ID (access policy checks) | `200 OK` or `404 Not Found` |
+| `PATCH` | `/api/v1/evidence/{id}` | Update evidence metadata or access policy | `200 OK` |
+| `DELETE` | `/api/v1/evidence/{id}` | Delete evidence record | `204 No Content` |
+| `GET/POST`| `/api/v1/review-cycles/{id}/evidence` | List or register evidence directly under a cycle | `200 OK` / `201 Created` |
+
+### Foundational Entities (Phase 2)
 | Method | Endpoint | Description | Return Status |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/v1/users` | List users (with optional role filter) | `200 OK` |
@@ -205,10 +232,6 @@ npm run dev
 | `GET` | `/api/v1/teams/{team_id}` | Fetch team by ID | `200 OK` or `404 Not Found` |
 | `POST` | `/api/v1/teams/{team_id}/members` | Add user to team | `201 Created` or `409 Conflict` |
 | `GET` | `/api/v1/teams/{team_id}/members` | List team memberships | `200 OK` |
-| `GET` | `/api/v1/review-cycles` | List review cycles (with status filter) | `200 OK` |
-| `POST` | `/api/v1/review-cycles` | Create review cycle (date validation) | `201 Created` |
-| `GET` | `/api/v1/review-cycles/{cycle_id}` | Fetch review cycle by ID | `200 OK` or `404 Not Found` |
-| `PATCH` | `/api/v1/review-cycles/{cycle_id}` | Update review cycle details/status | `200 OK` or `404 Not Found` |
 
 ---
 
