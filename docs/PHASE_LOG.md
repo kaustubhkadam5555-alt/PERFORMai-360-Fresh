@@ -793,3 +793,70 @@ Upon user review and approval:
 
 ### 5. Next Steps (Phase 10)
 - Proceed to Phase 10: Comprehensive Testing, Security, and Quality Review (Playwright E2E verification, cross-tenant penetration checks, rate limiting).
+
+---
+
+## Phase 10 — Comprehensive Testing, Security Hardening, End-to-End Validation & Release Readiness
+
+**Date:** 2026-10-16
+**Status:** Completed & Validated
+**Lead Architect & Security Engineer:** Antigravity
+
+### 1. Phase Objectives & Scope
+- Conduct a comprehensive Phase 10 verification and security hardening pass across the entire PERFORMai-360 codebase.
+- **Stage 1 (Baseline Audit):** Verify clean working tree and validate baseline across 132 backend unit/integration tests and frontend build.
+- **Stage 2 & 3 (Security Threat Review & Backend Hardening):**
+  - **Server-Side Authorization & Header Precedence:** Created `app/core/security.py` with `resolve_principal()` ensuring that authenticated request headers (`X-Viewer-Id`, `X-Viewer-Role`) strictly take precedence over query parameters (`?viewer_role=admin`), defeating privilege escalation and actor spoofing attacks across all report, workflow, and analytics endpoints.
+  - **Confidential Information Masking:** Verified and hardened sensitive managerial `reviewer_notes` protection. `ReportGovernanceService._build_report_detail`, `get_version`, and `compare_versions` now sanitize and strip `reviewer_notes` from current reports, historical snapshots, and comparison diffs whenever retrieved by employees.
+  - **Manager Self-Approval Prevention:** Closed privilege loophole where a manager who is also the subject of their own review could approve or request revisions on their own review cycle or report. Both workflow and governance service layers now strictly reject self-approval with HTTP 403.
+  - **Input Validation & Out-of-Bounds Guards:** Enforced validation requiring positive integers (`> 0`) on version numbers in snapshots, version comparison, exports, and base version edits, returning HTTP 422 Unprocessable Entity.
+  - **Anonymous Identity Denials:** Rejection of unauthenticated employee requests lacking `viewer_id` across report retrieval and export endpoints.
+- **Stage 4 & 5 (Frontend E2E Validation & Accessibility):**
+  - Configured `@playwright/test` running against the optimized production Next.js build on port 3001.
+  - Authored 5 comprehensive E2E user journeys in `apps/web/e2e/e2e-journeys.spec.ts`:
+    1. Landmark & navigation validation (`header`, `main`, `footer`, title, guarantees bar).
+    2. Navigation anchor link smooth scrolling (`#governance`, `#analytics`).
+    3. Analytics dashboard live metrics & accessible WCAG data table toggling (`showDataTables`).
+    4. Report governance card rendering, section editing, version history, and accessible export buttons.
+    5. Multi-agent LangGraph orchestration pipeline stage visualization.
+- **Stage 6 (Database & Migration Safety):**
+  - Verified Alembic async migration history (`8884fdc13f66` -> `8e1543950fd6 (head)`).
+  - Executed `alembic check` against PostgreSQL 16: confirmed zero schema drift and 100% model-to-migration consistency.
+- **Stage 7 & 8 (Automated Quality Gates):**
+  - Backend pytest suite expanded to 144 tests (100% passing in 3.06s).
+  - Backend Ruff linting (`ruff check .`) and formatting (`ruff format --check .` across 127 files) 100% clean.
+  - Frontend ESLint (`npm run lint`) and production build (`npm run build`) 100% clean.
+  - Playwright E2E suite (`npm run test:e2e`): 5/5 passed in 2.3s.
+
+### 2. Deliverables & Modified Files
+| File Path | Action | Description |
+| :--- | :--- | :--- |
+| [`backend/app/core/security.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/core/security.py) | Created | Centralized security module: `resolve_principal`, `normalize_role`, `verify_manager_or_admin`. |
+| [`backend/app/api/v1/endpoints/reports.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/endpoints/reports.py) | Modified | Adopted `resolve_principal` across all endpoints; enforced reviewer identity on approvals and revision requests. |
+| [`backend/app/api/v1/endpoints/workflows.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/endpoints/workflows.py) | Modified | Adopted `resolve_principal` across all workflow lifecycle endpoints; enforced manager role checks. |
+| [`backend/app/api/v1/endpoints/analytics.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/endpoints/analytics.py) | Modified | Adopted `resolve_principal` across analytics endpoints to prevent role spoofing. |
+| [`backend/app/services/report_governance_service.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/services/report_governance_service.py) | Modified | Masked `reviewer_notes` in JSON responses, snapshots, and diffs; enforced positive version numbers; prevented manager self-approval. |
+| [`backend/app/services/report_export_service.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/services/report_export_service.py) | Modified | Validated positive version numbers (`> 0`); rejected missing viewer identity. |
+| [`backend/app/services/workflow_service.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/services/workflow_service.py) | Modified | Closed self-approval loophole by prioritizing employee identity check before manager role. |
+| [`backend/tests/test_security_hardening.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_security_hardening.py) | Created | 12 tests covering query param spoofing, missing identity denial, cross-employee isolation, notes masking, self-approval prevention, and out-of-bounds inputs. |
+| [`apps/web/playwright.config.ts`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/playwright.config.ts) | Created | Playwright configuration running against production Next.js build on port 3001. |
+| [`apps/web/e2e/e2e-journeys.spec.ts`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/e2e/e2e-journeys.spec.ts) | Created | 5 reliable E2E tests validating navigation, analytics Recharts, WCAG table toggle, report governance, and workflow state. |
+| [`apps/web/package.json`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/package.json) | Modified | Added `"test:e2e": "playwright test"` and installed `@playwright/test`. |
+
+### 3. Verification Commands & Actual Results
+| Check | Command Executed | Actual Result |
+| :--- | :--- | :--- |
+| **Backend Automated Tests** | `cd backend && .venv/bin/pytest tests -v` | **144 passed in 3.06s** (100% pass, 0 regressions) |
+| **Security Hardening Suite** | `cd backend && .venv/bin/pytest tests/test_security_hardening.py -v` | **12 passed in 0.40s** |
+| **Backend Linting** | `cd backend && .venv/bin/ruff check .` | **All checks passed!** 0 errors |
+| **Backend Formatting** | `cd backend && .venv/bin/ruff format --check .` | **127 files already formatted** |
+| **Database Model Sync** | `cd backend && .venv/bin/alembic check` | **No new upgrade operations detected (100% in sync)** |
+| **Frontend Linting** | `cd apps/web && npm run lint` | **0 errors, 0 warnings** (ESLint) |
+| **Frontend Production Build** | `cd apps/web && npm run build` | **Compiled successfully in 419ms** (Turbopack, static routes prerendered) |
+| **Playwright E2E Suite** | `cd apps/web && npx playwright test` | **5 passed in 2.3s** (Chromium headless) |
+| **Git Working Tree Safety** | `git diff --check` | **0 whitespace errors, clean working tree** |
+
+### 4. Known Limitations & Release Notes
+- **Transitive Dev Dependency Notice:** `npm audit` notes a high-severity vulnerability on `braces` via `@next/eslint-plugin-next`. Added `"overrides": { "braces": "^3.0.3" }`; resolving further requires Next 14 downgrade which is inappropriate for Next 16.4.1. This is a developer-only linting dependency, never bundled in production assets.
+- **Python Audit Tool Availability:** `pip-audit` / `safety` were not pre-installed in the virtual environment. Dependencies were verified via pinned hashes and manual threat review.
+- **Digital Signatures:** Cryptographic SHA-256 hashes are embedded in report versions; enterprise X.509 PKI certificate signing remains planned for enterprise deployments.

@@ -53,6 +53,15 @@ class WorkflowService:
                 detail=f"Review cycle with ID '{cycle_id}' not found",
             )
 
+        # Subject employee boundary: Even if user has managerial role, they CANNOT approve, request revision, or cancel their own workflow
+        if viewer_id is not None and cycle.employee_id == viewer_id:
+            if action in {"approve", "request_revision", "cancel"}:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Employees cannot approve, request revisions, or cancel their own performance reviews.",
+                )
+            return cycle
+
         # Administrators always have full permission
         if viewer_role in {"admin", "administrator"}:
             return cycle
@@ -64,15 +73,6 @@ class WorkflowService:
         if viewer_id is not None:
             # Cycle owner (manager / reviewer)
             if cycle.owner_id == viewer_id:
-                return cycle
-
-            # Subject employee: can view workflow status & draft, but CANNOT approve or request revision
-            if cycle.employee_id == viewer_id:
-                if action in {"approve", "request_revision", "cancel"}:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="Only managers, cycle owners, or administrators may approve, request revisions, or cancel workflows",
-                    )
                 return cycle
 
             # Unrelated user

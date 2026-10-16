@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import resolve_principal, verify_manager_or_admin
 from app.db.session import get_db
 from app.schemas.report_governance import (
     ApprovalHistoryResponse,
@@ -42,8 +43,13 @@ async def get_report_by_id(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
     service = ReportGovernanceService(db)
     return await service.get_report_by_id(
         report_id=report_id,
@@ -66,8 +72,13 @@ async def get_report_by_cycle(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
     service = ReportGovernanceService(db)
     return await service.get_report_for_cycle(
         cycle_id=cycle_id,
@@ -109,8 +120,14 @@ async def edit_report_section(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
-    effective_editor_id = viewer_id or x_viewer_id
-    effective_editor_role = viewer_role or x_viewer_role
+    effective_editor_id, effective_editor_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
+    verify_manager_or_admin(effective_editor_role)
     service = ReportGovernanceService(db)
     return await service.edit_section(
         report_id=report_id,
@@ -141,8 +158,13 @@ async def list_report_versions(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> ReportVersionListResponse:
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
     service = ReportGovernanceService(db)
     return await service.list_versions(
         report_id=report_id,
@@ -167,8 +189,13 @@ async def get_report_version(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> ReportVersionDetail:
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
     service = ReportGovernanceService(db)
     return await service.get_version(
         report_id=report_id,
@@ -213,8 +240,13 @@ async def compare_report_versions(
             detail="Both 'from_version' (or 'from') and 'to_version' (or 'to') query parameters are required.",
         )
 
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
     service = ReportGovernanceService(db)
     return await service.compare_versions(
         report_id=report_id,
@@ -251,14 +283,20 @@ async def approve_report(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
-    effective_reviewer_id = viewer_id or x_viewer_id
-    effective_reviewer_role = viewer_role or x_viewer_role
+    effective_reviewer_id, effective_reviewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
 
     if not effective_reviewer_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Reviewer identity is required for approval.",
         )
+    verify_manager_or_admin(effective_reviewer_role)
 
     req = request_in or ReportApprovalRequest()
     service = ReportGovernanceService(db)
@@ -287,14 +325,20 @@ async def approve_report_version(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
-    effective_reviewer_id = viewer_id or x_viewer_id
-    effective_reviewer_role = viewer_role or x_viewer_role
+    effective_reviewer_id, effective_reviewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
 
     if not effective_reviewer_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Reviewer identity is required for approval.",
         )
+    verify_manager_or_admin(effective_reviewer_role)
 
     req = request_in.model_copy() if request_in else ReportApprovalRequest()
     req.version_id = version_id
@@ -324,14 +368,20 @@ async def request_report_revision(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> ReportDetailResponse:
-    effective_reviewer_id = viewer_id or x_viewer_id
-    effective_reviewer_role = viewer_role or x_viewer_role
+    effective_reviewer_id, effective_reviewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
 
     if not effective_reviewer_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Reviewer identity is required to request revisions.",
         )
+    verify_manager_or_admin(effective_reviewer_role)
 
     service = ReportGovernanceService(db)
     return await service.request_revision(
@@ -361,8 +411,13 @@ async def get_report_approvals(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> ApprovalHistoryResponse:
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
     service = ReportGovernanceService(db)
     return await service.get_approval_history(
         report_id=report_id,
@@ -386,8 +441,13 @@ async def get_report_audit_events(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> GovernanceAuditListResponse:
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
     service = ReportGovernanceService(db)
     return await service.get_audit_history(
         report_id=report_id,
@@ -426,8 +486,13 @@ async def export_report_pdf(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
     service = ReportExportService(db)
     pdf_bytes, filename = await service.generate_pdf(
         report_id=report_id,
@@ -470,8 +535,13 @@ async def export_report_docx(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
     service = ReportExportService(db)
     docx_bytes, filename = await service.generate_docx(
         report_id=report_id,

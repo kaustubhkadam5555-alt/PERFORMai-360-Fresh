@@ -104,8 +104,8 @@ class ReportExportService:
 
         # Scoping verification
         role_lower = (viewer_role or "employee").lower()
-        if role_lower == "employee" and viewer_id:
-            if cycle.employee_id != viewer_id:
+        if role_lower == "employee":
+            if not viewer_id or cycle.employee_id != viewer_id:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"Report '{report_id}' not found.",
@@ -114,6 +114,11 @@ class ReportExportService:
         # Resolve exact version
         target_version: Optional[ReportVersion] = None
         if version_number is not None:
+            if version_number <= 0:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="version_number must be greater than 0.",
+                )
             target_version = await ReportGovernanceRepository.get_version_by_number(self.db, report_id, version_number)
             if not target_version:
                 raise HTTPException(

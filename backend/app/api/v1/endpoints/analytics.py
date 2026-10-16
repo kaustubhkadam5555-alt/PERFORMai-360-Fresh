@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Header, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import resolve_principal
 from app.db.session import get_db
 from app.schemas.analytics import (
     AnalyticsOverviewResponse,
@@ -35,8 +36,13 @@ async def get_analytics_overview(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> AnalyticsOverviewResponse:
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
     service = AnalyticsService(db)
     return await service.get_overview(
         viewer_id=effective_viewer_id,
@@ -64,8 +70,13 @@ async def get_review_analytics(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> ReviewAnalyticsResponse:
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
     service = AnalyticsService(db)
     return await service.get_reviews(
         viewer_id=effective_viewer_id,
@@ -93,8 +104,13 @@ async def get_evidence_analytics(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> EvidenceAnalyticsResponse:
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
     service = AnalyticsService(db)
     return await service.get_evidence(
         viewer_id=effective_viewer_id,
@@ -122,8 +138,13 @@ async def get_audit_analytics(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> AuditAnalyticsResponse:
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
     service = AnalyticsService(db)
     return await service.get_audits(
         viewer_id=effective_viewer_id,
@@ -150,8 +171,13 @@ async def get_analytics_trends(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> AnalyticsTrendsResponse:
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
     service = AnalyticsService(db)
     return await service.get_trends(
         viewer_id=effective_viewer_id,

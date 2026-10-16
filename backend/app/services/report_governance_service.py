@@ -87,22 +87,20 @@ class ReportGovernanceService:
             )
 
         # Cross-employee protection: An employee can only view their own report
-        if role_lower == "employee" and viewer_id:
-            if cycle.employee_id != viewer_id:
+        if role_lower == "employee":
+            if not viewer_id or cycle.employee_id != viewer_id:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"Report '{report.id}' not found.",
                 )
 
-        # Manager scoping: Verify manager is owner or cycle belongs to their domain
+        # Manager scoping: A manager cannot approve or edit their own review
         if role_lower == "manager" and viewer_id:
-            if cycle.owner_id != viewer_id and cycle.employee_id == viewer_id:
-                # Employee acting as manager on their own review is blocked from manager mutations
-                if require_manager:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="Employees cannot approve or edit their own performance reviews.",
-                    )
+            if cycle.employee_id == viewer_id and require_manager:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Employees cannot approve or edit their own performance reviews.",
+                )
 
     # ---------------------------------------------------------------------------
     # Report Retrieval
@@ -122,7 +120,7 @@ class ReportGovernanceService:
             )
 
         await self._verify_access(report, viewer_id, viewer_role, require_manager=False)
-        return await self._build_report_detail(report)
+        return await self._build_report_detail(report, viewer_role=viewer_role)
 
     async def get_report_for_cycle(
         self,
@@ -138,7 +136,7 @@ class ReportGovernanceService:
             )
 
         await self._verify_access(report, viewer_id, viewer_role, require_manager=False)
-        return await self._build_report_detail(report)
+        return await self._build_report_detail(report, viewer_role=viewer_role)
 
     # ---------------------------------------------------------------------------
     # Feature A: Section-Level Report Editing
@@ -160,6 +158,12 @@ class ReportGovernanceService:
         - Creates an immutable ReportVersion snapshot.
         - Logs an AuditEvent for traceability.
         """
+        if request_in.base_version_number <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="base_version_number must be greater than 0",
+            )
+
         if section_key not in SUPPORTED_SECTIONS:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -254,7 +258,7 @@ class ReportGovernanceService:
             request_in.base_version_number,
             next_version,
         )
-        return await self._build_report_detail(report)
+        return await self._build_report_detail(report, viewer_role=editor_role)
 
     # ---------------------------------------------------------------------------
     # Feature B: Version Listing & History
@@ -320,6 +324,16 @@ class ReportGovernanceService:
         await self._verify_access(report, viewer_id, viewer_role, require_manager=False)
 
         # Check if version_identifier is an integer version number or UUID
+        try:
+            v_num = int(version_identifier)
+            if v_num <= 0:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="Version numbers must be greater than 0.",
+                )
+        except ValueError:
+            pass
+
         version: Optional[ReportVersion] = None
         if version_identifier.isdigit():
             version = await ReportGovernanceRepository.get_version_by_number(
@@ -338,6 +352,12 @@ class ReportGovernanceService:
                 detail=f"Version '{version_identifier}' not found for report '{report_id}'.",
             )
 
+        raw_content = version.structured_content or {}
+        if viewer_role and viewer_role.lower() == "employee":
+            structured_content = {k: v for k, v in raw_content.items() if k != "reviewer_notes"}
+        else:
+            structured_content = raw_content
+
         return ReportVersionDetail(
             version_id=version.id,
             report_id=version.report_id,
@@ -350,7 +370,7 @@ class ReportGovernanceService:
             author_role=version.author_role,
             is_ai_generated=version.is_ai_generated,
             created_at=version.created_at,
-            structured_content=version.structured_content,
+            structured_content=structured_content,
         )
 
     # ---------------------------------------------------------------------------
@@ -372,6 +392,24 @@ class ReportGovernanceService:
         - Additions and deletions for list sections and citations.
         - Governance status changes.
         """
+        try:
+            if int(from_version_identifier) <= 0:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="Version numbers must be greater than 0",
+                )
+        except ValueError:
+            pass
+
+        try:
+            if int(to_version_identifier) <= 0:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="Version numbers must be greater than 0",
+                )
+        except ValueError:
+            pass
+
         report = await ReportGovernanceRepository.get_report_by_id(self.db, report_id)
         if not report:
             raise HTTPException(
@@ -472,6 +510,11 @@ class ReportGovernanceService:
         # Status change note
         if v_from.status != v_to.status:
             change_summary_bullets.append(f"Status transition: {v_from.status} -> {v_to.status}")
+
+        if viewer_role and viewer_role.lower() == "employee":
+            section_diffs = {k: v for k, v in section_diffs.items() if k != "reviewer_notes"}
+            sections_changed = [s for s in sections_changed if s != "reviewer_notes"]
+            change_summary_bullets = [s for s in change_summary_bullets if "reviewer_notes" not in s.lower()]
 
         return VersionComparisonResponse(
             report_id=report.id,
@@ -609,7 +652,7 @@ class ReportGovernanceService:
             reviewer_id,
             reviewer_role,
         )
-        return await self._build_report_detail(report)
+        return await self._build_report_detail(report, viewer_role=reviewer_role)
 
     async def request_revision(
         self,
@@ -699,7 +742,7 @@ class ReportGovernanceService:
             report.version_number,
             reviewer_id,
         )
-        return await self._build_report_detail(report)
+        return await self._build_report_detail(report, viewer_role=reviewer_role)
 
     # ---------------------------------------------------------------------------
     # Feature F: Approval History & Governance Audit Trail
@@ -856,7 +899,9 @@ class ReportGovernanceService:
 
         return content
 
-    async def _build_report_detail(self, report: ReviewReport) -> ReportDetailResponse:
+    async def _build_report_detail(
+        self, report: ReviewReport, viewer_role: Optional[str] = None
+    ) -> ReportDetailResponse:
         cycle: Optional[ReviewCycle] = report.review_cycle
         if not cycle:
             cycle = await ReviewCycleRepository.get_by_id(self.db, report.cycle_id)
@@ -867,13 +912,19 @@ class ReportGovernanceService:
         last_approval = next((a for a in approvals if a.decision == "approved"), None)
         last_edit = latest_version if latest_version and not latest_version.is_ai_generated else None
 
+        raw_content = report.structured_content or {}
+        if viewer_role and viewer_role.lower() == "employee":
+            structured_content = {k: v for k, v in raw_content.items() if k != "reviewer_notes"}
+        else:
+            structured_content = raw_content
+
         return ReportDetailResponse(
             report_id=report.id,
             cycle_id=report.cycle_id,
             employee_id=cycle.employee_id if cycle else report.cycle_id,
             version_number=report.version_number,
             status=report.status,
-            structured_content=report.structured_content or {},
+            structured_content=structured_content,
             latest_version_id=latest_version.id if latest_version else None,
             is_approved=report.status == "approved",
             approved_version_number=last_approval.version_number if last_approval else None,

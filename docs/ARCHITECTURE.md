@@ -290,7 +290,27 @@ erDiagram
 
 ---
 
-## 8. Phased Implementation Strategy
+---
+
+## 8. Security Architecture, Hardening, and End-to-End Validation (Phase 10)
+
+### Server-Side Principal Resolution & Role Precedence
+- **Authoritative Ingestion (`app/core/security.py`):** Centralized caller resolution where authenticated request headers (`X-Viewer-Id`, `X-Viewer-Role`) strictly override query parameters. An untrusted caller passing `?viewer_role=admin` while holding an employee header is strictly resolved to `employee`.
+- **Role Verification:** Critical lifecycle state changes (approvals, revisions, cancellations, workflows) execute mandatory `verify_manager_or_admin()` checks before invoking service transactions.
+
+### Confidential Information Masking & Data Leakage Prevention
+- **Managerial Notes Protection:** The JSON responses for `GET /api/v1/reports/{id}`, `GET /api/v1/review-cycles/{id}/report`, `GET /api/v1/reports/{id}/versions/{version_number}`, and `GET /api/v1/reports/{id}/compare` dynamically sanitize and strip confidential `reviewer_notes` whenever accessed by employees.
+- **Diff Redaction:** Comparison diffs between historical versions redact lines, bullet summaries, and keys mentioning reviewer notes for non-managerial callers.
+
+### Privilege Loophole Closure: Self-Approval Prevention
+- **Separation of Subject & Evaluator:** In hierarchical workflows, a user who is a manager in the organization cannot approve, request revisions on, or cancel their own performance review. Both `WorkflowService._authorize_and_get_cycle` and `ReportGovernanceService._verify_access` prioritize subject employee verification (`cycle.employee_id == viewer_id`) before role checks, raising HTTP 403 Forbidden.
+
+### Automated End-to-End Testing (Playwright)
+- **Production Validation:** Headless Chromium automated suite (`apps/web/e2e/e2e-journeys.spec.ts`) executing against the production Next.js build on port 3001. Validates application navigation, Recharts analytics, accessible data table toggles, report governance controls, and LangGraph workflow pipeline state with 100% pass rate.
+
+---
+
+## 9. Phased Implementation Strategy
 
 Development is executed sequentially across twelve controlled phases:
 - **Phase 0:** Repository and Planning Baseline *(Completed)*
@@ -303,5 +323,5 @@ Development is executed sequentially across twelve controlled phases:
 - **Phase 7:** LangGraph Multi-Agent Orchestration *(Completed)*
 - **Phase 8:** Human Approval, Report Versioning, and Governance *(Completed)*
 - **Phase 9:** Dashboard Polish, Accessibility, and Export *(Completed)*
-- **Phase 10:** Comprehensive Testing, Security, and Quality Review
+- **Phase 10:** Comprehensive Testing, Security, and Quality Review *(Completed)*
 - **Phase 11:** Final Documentation, Evaluation Metrics, and Demonstration Readiness

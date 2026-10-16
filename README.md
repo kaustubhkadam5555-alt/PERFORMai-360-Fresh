@@ -46,7 +46,7 @@
 - **Database:** PostgreSQL 16 (Docker Compose with persistent volume `pgdata`, port 5433)
 - **Agent Orchestration:** LangGraph state machine with deterministic approval pauses
 - **AI Integration:** Provider-neutral adapter with offline mock support (no paid API key required)
-- **Testing & Quality:** pytest + pytest-asyncio + httpx (backend, 132 tests, 100% pass), ESLint (frontend), Ruff (backend)
+- **Testing & Quality:** pytest + pytest-asyncio + httpx (backend, 144 tests, 100% pass), Playwright (E2E browser tests, 5/5 pass), ESLint (frontend), Ruff (backend)
 
 ---
 
@@ -152,7 +152,7 @@ pip install -e ".[dev]"
 # Run database migrations
 alembic upgrade head
 
-# Run automated tests (95 tests)
+# Run automated tests (144 tests, 100% pass)
 pytest tests -v
 
 # Run code linter and format check
@@ -176,6 +176,9 @@ npm run lint
 
 # Build production bundle
 npm run build
+
+# Run Playwright End-to-End tests (5 journeys)
+npm run test:e2e
 
 # Start development server (runs on http://localhost:3000)
 npm run dev

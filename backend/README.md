@@ -41,7 +41,8 @@ backend/
 │   │       │   └── analytics.py      # Real-time aggregated PostgreSQL analytics
 │   │       └── router.py             # API v1 router aggregator
 │   ├── core/
-│   │   └── config.py                 # Pydantic Settings configuration (LLM, upload limits, storage dir)
+│   │   ├── config.py                 # Pydantic Settings configuration (LLM, upload limits, storage dir)
+│   │   └── security.py               # Security principal resolution, role normalization & RBAC guards
 │   ├── db/
 │   │   ├── base.py                   # SQLAlchemy 2.0 Base, naming conventions & mixins
 │   │   └── session.py                # Async SQLAlchemy engine, session generator & health probe
@@ -56,7 +57,7 @@ backend/
 │   │   └── graph.py                  # StateGraph compiler, edges, and conditional routing
 │   └── main.py                       # FastAPI application entry point, CORS & lifespan
 ├── migrations/                       # Alembic async migration scripts & env.py
-├── tests/                            # Pytest test suite (132 automated tests, 100% pass)
+├── tests/                            # Pytest test suite (144 automated tests, 100% pass)
 ├── alembic.ini                       # Alembic database migration configuration
 └── pyproject.toml                    # Dependency specifications & tool configs
 ```

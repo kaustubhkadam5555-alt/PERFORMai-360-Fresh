@@ -1,9 +1,10 @@
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Header, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import resolve_principal, verify_manager_or_admin
 from app.db.session import get_db
 from app.schemas.workflow import (
     WorkflowApprovalRequest,
@@ -46,8 +47,13 @@ async def start_workflow(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> WorkflowStatusResponse:
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="manager",
+    )
     service = WorkflowService(db)
     return await service.start_workflow(
         cycle_id=cycle_id,
@@ -73,8 +79,13 @@ async def list_cycle_workflows(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> WorkflowListResponse:
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
     service = WorkflowService(db)
     return await service.list_workflows_for_cycle(
         cycle_id=cycle_id,
@@ -104,8 +115,13 @@ async def get_workflow(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> WorkflowStatusResponse:
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
     service = WorkflowService(db)
     return await service.get_workflow(
         workflow_id=workflow_id,
@@ -130,8 +146,20 @@ async def approve_workflow(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> WorkflowStatusResponse:
-    effective_viewer_id = viewer_id or x_viewer_id or uuid.uuid4()
-    effective_viewer_role = viewer_role or x_viewer_role or "manager"
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
+    if not effective_viewer_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Reviewer identity is required for workflow approval.",
+        )
+    verify_manager_or_admin(effective_viewer_role)
+
     payload = request_in or WorkflowApprovalRequest()
     service = WorkflowService(db)
     return await service.approve_workflow(
@@ -158,8 +186,20 @@ async def request_revision(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> WorkflowStatusResponse:
-    effective_viewer_id = viewer_id or x_viewer_id or uuid.uuid4()
-    effective_viewer_role = viewer_role or x_viewer_role or "manager"
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="employee",
+    )
+    if not effective_viewer_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Reviewer identity is required to request workflow revisions.",
+        )
+    verify_manager_or_admin(effective_viewer_role)
+
     service = WorkflowService(db)
     return await service.request_revision(
         workflow_id=workflow_id,
@@ -184,8 +224,14 @@ async def resume_workflow(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> WorkflowStatusResponse:
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="manager",
+    )
+    verify_manager_or_admin(effective_viewer_role)
     service = WorkflowService(db)
     return await service.resume_workflow(
         workflow_id=workflow_id,
@@ -210,8 +256,14 @@ async def cancel_workflow(
     x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
     db: AsyncSession = Depends(get_db),
 ) -> WorkflowStatusResponse:
-    effective_viewer_id = viewer_id or x_viewer_id
-    effective_viewer_role = viewer_role or x_viewer_role
+    effective_viewer_id, effective_viewer_role = resolve_principal(
+        header_id=x_viewer_id,
+        header_role=x_viewer_role,
+        query_id=viewer_id,
+        query_role=viewer_role,
+        default_role="manager",
+    )
+    verify_manager_or_admin(effective_viewer_role)
     payload = request_in or WorkflowCancelRequest()
     service = WorkflowService(db)
     return await service.cancel_workflow(
