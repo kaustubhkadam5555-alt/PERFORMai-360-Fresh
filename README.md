@@ -113,9 +113,9 @@ Development proceeds strictly in sequential phases:
 - [x] **Phase 6 — Bias & Evidence-Quality Audit Engine** *(Completed)*
 - [x] **Phase 7 — LangGraph Multi-Agent Orchestration** *(Completed)*
 - [x] **Phase 8 — Human Approval, Report Versions, & Governance** *(Completed)*
-- [ ] **Phase 9 — Dashboard Polish, Accessibility, & Export**
-- [ ] **Phase 10 — Comprehensive Testing & Security Review**
-- [ ] **Phase 11 — Final Documentation & Demonstration Readiness**
+- [x] **Phase 9 — Dashboard Polish, Accessibility, & Export** *(Completed)*
+- [x] **Phase 10 — Comprehensive Testing & Security Review** *(Completed)*
+- [x] **Phase 11 — Final Documentation & Demonstration Readiness** *(Completed)*
 
 Refer to [docs/PHASE_LOG.md](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/docs/PHASE_LOG.md) for detailed milestone records.
 
@@ -303,3 +303,5 @@ npm run dev
 - **[Product Requirements Document (PRD)](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/docs/PRD.md)** — Full functional and non-functional requirements.
 - **[System Architecture](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/docs/ARCHITECTURE.md)** — Architectural design, agent workflow graph, and entity schemas.
 - **[Phase Execution Log](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/docs/PHASE_LOG.md)** — Live audit log tracking phase completion and verified checks.
+- **[Demonstration Guide](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/docs/DEMO_GUIDE.md)** — Repeatable end-to-end demonstration walkthrough with synthetic personas.
+- **[Test Results & Verification Record](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/docs/TEST_RESULTS.md)** — Formal verification record (144 backend tests, 5 Playwright E2E journeys, database migration checks).

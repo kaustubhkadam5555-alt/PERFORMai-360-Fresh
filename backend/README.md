@@ -246,3 +246,12 @@ The backend supports multiple LLM providers configured via environment variables
 - `LLM_PROVIDER="anthropic"`: Uses `ANTHROPIC_API_KEY` with configured `ANTHROPIC_MODEL` (default: `claude-3-5-sonnet-20241022`).
 - `LLM_PROVIDER="ollama"`: Local offline inference via `OLLAMA_BASE_URL` (default: `http://localhost:11434`) and `OLLAMA_MODEL`.
 - `LLM_PROVIDER="none"`: Disabled mode. Reports AI analysis unavailable safely with HTTP 503 or structured failed response without crashing.
+
+---
+
+## 5. Documentation & Verification References
+
+- **[Demonstration Guide (`docs/DEMO_GUIDE.md`)](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/docs/DEMO_GUIDE.md)**: Repeatable end-to-end walkthrough using synthetic test personas.
+- **[Formal Test Results (`docs/TEST_RESULTS.md`)](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/docs/TEST_RESULTS.md)**: Complete verification record covering all 144 backend pytest tests, 5 Playwright E2E journeys, and security checks.
+- **[System Architecture (`docs/ARCHITECTURE.md`)](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/docs/ARCHITECTURE.md)**: Detailed system architecture, data models, and multi-agent workflow specifications.
+- **[Phase Implementation Log (`docs/PHASE_LOG.md`)](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/docs/PHASE_LOG.md)**: Chronological development log across all 12 project phases.

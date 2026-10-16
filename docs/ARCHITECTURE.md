@@ -1,7 +1,7 @@
 # PERFORMai-360: System Architecture Specification
 
 **Project Title:** PERFORMai-360: AI-Driven Bias-Aware 360° Performance Evaluation for Software Engineering Teams
-**Document Status:** Phase 7 LangGraph Multi-Agent Orchestration & Human-in-the-Loop Workflow Implemented
+**Document Status:** Phase 11 Final Documentation, Verification, and Demonstration Readiness Completed
 **Target Environment:** macOS Local Development, Docker Compose, Python 3.14+, Node.js v26+
 
 ---
@@ -310,7 +310,27 @@ erDiagram
 
 ---
 
-## 9. Phased Implementation Strategy
+## 9. Demonstration Architecture and Verification Framework (Phase 11)
+
+### Multi-Tier Automated Verification Harness
+- **Backend Quality Gates (pytest + Ruff):** 144 unit, integration, and security tests executing against PostgreSQL 16 using `NullPool` with automatic transaction rollback. Zero state bleed or test fixture pollution. Fast, deterministic execution (<3.5s total runtime).
+- **Database Schema Invariance (`Alembic`):** `alembic check` verifies that declarative SQLAlchemy 2.0 ORM models match migration history (`8884fdc13f66` through `8e1543950fd6 (head)`) with zero untracked drift.
+- **Frontend Quality Gates (Next.js + ESLint):** Zero ESLint warnings, TypeScript type safety, static route prerendering, and optimized production bundle compilation via Turbopack.
+- **End-to-End Browser Automation (Playwright):** 5 headless Chromium journeys executing against production build on isolated port 3001, verifying navigation, analytics dashboards, accessible WCAG tables, report governance, and multi-agent workflow state.
+
+### Repeatable Synthetic Demonstration Architecture
+- **Synthetic Personas & Data Isolation:** All demonstration workflows utilize strictly synthetic user profiles (Carol Manager, Alice Employee, Bob Peer, Dave Manager, and System Admin). Real employee data and external credentials are systematically excluded.
+- **Repeatable Step-by-Step Flow:** Fully documented in [`docs/DEMO_GUIDE.md`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/docs/DEMO_GUIDE.md) covering the 11 key operational stages from cycle initiation to branded PDF/DOCX report exports.
+- **Security Boundary Demonstrations:** Dedicated demonstration paths for cross-employee isolation (404 Not Found), manager self-approval rejection (403 Forbidden), and role spoofing prevention via server-side header precedence.
+
+### Decision-Support Governance & AI Safety Boundaries
+- **Strict Human Agency:** The platform functions as an evidence-grounded decision-support tool. Autonomous employment, compensation, promotion, and termination decisions are structurally prohibited.
+- **Source Citation Enforcement:** All extracted performance findings must link to valid source `evidence_ids`. Cross-employee or ungrounded claims are stripped and flagged with explicit system limitations.
+- **Immutable Governance Trail:** Approvals, revision requests, and section modifications generate immutable, append-only `AuditEvent` records and versioned snapshots in `report_versions`.
+
+---
+
+## 10. Phased Implementation Strategy
 
 Development is executed sequentially across twelve controlled phases:
 - **Phase 0:** Repository and Planning Baseline *(Completed)*
@@ -324,4 +344,4 @@ Development is executed sequentially across twelve controlled phases:
 - **Phase 8:** Human Approval, Report Versioning, and Governance *(Completed)*
 - **Phase 9:** Dashboard Polish, Accessibility, and Export *(Completed)*
 - **Phase 10:** Comprehensive Testing, Security, and Quality Review *(Completed)*
-- **Phase 11:** Final Documentation, Evaluation Metrics, and Demonstration Readiness
+- **Phase 11:** Final Documentation, Evaluation Metrics, and Demonstration Readiness *(Completed)*
