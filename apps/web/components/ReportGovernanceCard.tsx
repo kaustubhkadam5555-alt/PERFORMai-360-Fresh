@@ -134,6 +134,7 @@ export function ReportGovernanceCard() {
   // State loading/feedback
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isActionLoading, setIsActionLoading] = useState<boolean>(false);
+  const [exportingFormat, setExportingFormat] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -501,6 +502,54 @@ export function ReportGovernanceCard() {
     }
   };
 
+  const handleExport = async (format: "pdf" | "docx", versionNumber?: number) => {
+    if (!report) return;
+    const targetVer = versionNumber || report.version_number;
+    const exportKey = `${format}-${targetVer}`;
+    setExportingFormat(exportKey);
+    setErrorMessage(null);
+
+    try {
+      const q = versionNumber ? `?version_number=${versionNumber}` : "";
+      const url = `${backendBaseUrl}/api/v1/reports/${report.id}/export/${format}${q}`;
+      const res = await fetch(url, {
+        headers: {
+          "X-Viewer-Role": viewerRole,
+        },
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || `HTTP ${res.status}: Export generation failed.`);
+      }
+
+      const blob = await res.blob();
+      const contentDisposition = res.headers.get("content-disposition");
+      let filename = `PERFORMai360_Report_v${targetVer}.${format}`;
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename=["']?([^"';]+)["']?/);
+        if (match && match[1]) {
+          filename = match[1];
+        }
+      }
+
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      setSuccessMessage(`Export downloaded: ${filename}`);
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : `Failed to export ${format.toUpperCase()}`);
+    } finally {
+      setExportingFormat(null);
+    }
+  };
+
   return (
     <section id="governance" className="mt-14">
       {/* Header Bar */}
@@ -617,21 +666,21 @@ export function ReportGovernanceCard() {
             </div>
           </div>
 
-          {/* Action Buttons for Managers */}
-          <div className="flex items-center space-x-2">
+          {/* Action Buttons for Managers & Exports */}
+          <div className="flex flex-wrap items-center gap-2">
             {viewerRole !== "employee" && report.status !== "approved" && (
               <>
                 <button
                   onClick={() => setApprovalModalMode("revision")}
-                  disabled={isActionLoading}
-                  className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3.5 py-2 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 transition"
+                  disabled={isActionLoading || !!exportingFormat}
+                  className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3.5 py-2 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 transition disabled:opacity-50"
                 >
                   Request Revisions
                 </button>
                 <button
                   onClick={() => setApprovalModalMode("approve")}
-                  disabled={isActionLoading}
-                  className="rounded-lg border border-emerald-500/50 bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition shadow-lg shadow-emerald-900/30"
+                  disabled={isActionLoading || !!exportingFormat}
+                  className="rounded-lg border border-emerald-500/50 bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition shadow-lg shadow-emerald-900/30 disabled:opacity-50"
                 >
                   Approve Version {report.version_number}
                 </button>
@@ -642,6 +691,36 @@ export function ReportGovernanceCard() {
                 ✓ Version {report.version_number} Finalized
               </span>
             )}
+
+            {/* Export buttons */}
+            <div className="flex items-center space-x-1.5 border-l border-slate-700/60 pl-2">
+              <button
+                type="button"
+                onClick={() => handleExport("pdf")}
+                disabled={!!exportingFormat}
+                title={`Export Version ${report.version_number} as PDF`}
+                aria-label={`Export Version ${report.version_number} as PDF`}
+                className="inline-flex items-center space-x-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/20 transition disabled:opacity-50"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>{exportingFormat === `pdf-${report.version_number}` ? "Exporting..." : "Export PDF"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExport("docx")}
+                disabled={!!exportingFormat}
+                title={`Export Version ${report.version_number} as Word Document`}
+                aria-label={`Export Version ${report.version_number} as DOCX`}
+                className="inline-flex items-center space-x-1.5 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-300 hover:bg-blue-500/20 transition disabled:opacity-50"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>{exportingFormat === `docx-${report.version_number}` ? "Exporting..." : "Export DOCX"}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1037,12 +1116,34 @@ export function ReportGovernanceCard() {
                       </td>
                       <td className="py-3 px-3 text-slate-400">{new Date(ver.created_at).toLocaleString()}</td>
                       <td className="py-3 px-3 text-right">
-                        <button
-                          onClick={() => handleInspectSnapshot(ver)}
-                          className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-[11px] font-medium text-slate-300 hover:bg-slate-700"
-                        >
-                          Inspect Snapshot
-                        </button>
+                        <div className="flex items-center justify-end space-x-1">
+                          <button
+                            onClick={() => handleInspectSnapshot(ver)}
+                            className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-[11px] font-medium text-slate-300 hover:bg-slate-700"
+                          >
+                            Inspect Snapshot
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleExport("pdf", ver.version_number)}
+                            disabled={!!exportingFormat}
+                            title={`Download v${ver.version_number} PDF`}
+                            aria-label={`Download Version ${ver.version_number} PDF`}
+                            className="rounded-md border border-red-500/30 bg-red-500/10 px-2 py-1 text-[11px] font-semibold text-red-300 hover:bg-red-500/20 disabled:opacity-50"
+                          >
+                            {exportingFormat === `pdf-${ver.version_number}` ? "..." : "PDF"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleExport("docx", ver.version_number)}
+                            disabled={!!exportingFormat}
+                            title={`Download v${ver.version_number} DOCX`}
+                            aria-label={`Download Version ${ver.version_number} DOCX`}
+                            className="rounded-md border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-[11px] font-semibold text-blue-300 hover:bg-blue-500/20 disabled:opacity-50"
+                          >
+                            {exportingFormat === `docx-${ver.version_number}` ? "..." : "DOCX"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1231,12 +1332,31 @@ export function ReportGovernanceCard() {
                   {inspectedVersion.change_summary} · Created {new Date(inspectedVersion.created_at).toLocaleString()}
                 </p>
               </div>
-              <button
-                onClick={() => setInspectedVersion(null)}
-                className="rounded-lg bg-slate-800 p-1.5 text-slate-400 hover:text-white"
-              >
-                ✕
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => handleExport("pdf", inspectedVersion.version_number)}
+                  disabled={!!exportingFormat}
+                  className="rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-300 hover:bg-red-500/20 disabled:opacity-50"
+                >
+                  {exportingFormat === `pdf-${inspectedVersion.version_number}` ? "Exporting..." : "Download PDF"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExport("docx", inspectedVersion.version_number)}
+                  disabled={!!exportingFormat}
+                  className="rounded-md border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-xs font-semibold text-blue-300 hover:bg-blue-500/20 disabled:opacity-50"
+                >
+                  {exportingFormat === `docx-${inspectedVersion.version_number}` ? "Exporting..." : "Download DOCX"}
+                </button>
+                <button
+                  onClick={() => setInspectedVersion(null)}
+                  className="rounded-lg bg-slate-800 p-1.5 text-slate-400 hover:text-white"
+                  aria-label="Close snapshot modal"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
             {isLoadingSnapshot ? (

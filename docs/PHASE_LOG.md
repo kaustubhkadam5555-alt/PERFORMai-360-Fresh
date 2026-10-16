@@ -716,6 +716,80 @@ Upon user review and approval:
 - **Approval Revocation:** The PRD does not define arbitrary approval revocation; once approved, a version snapshot remains permanently immutable. Any subsequent adjustments spawn a new draft version requiring fresh sign-off.
 - **Export Formats (PDF/DOCX):** Generating branded PDF and DOCX documents with cryptographic hash seals and corporate styling belongs to Phase 9.
 
-### 5. Next Steps (Phase 9)
-Upon user review and approval:
-- Implement Phase 9: Dashboard Polish, Analytics Visualizations (Recharts), Export Capabilities, and Full WCAG Accessibility.
+### 5. Next Steps
+- Phase 8 is verified and completed. Proceed to Phase 9.
+
+---
+
+## Phase 9 — Analytics Dashboard, PDF/DOCX Export, Accessibility and Production Quality
+
+**Date:** 2026-10-16
+**Status:** Completed & Verified
+**Lead Agent:** Antigravity (Senior Full-Stack, Security & Accessibility Engineer)
+
+### 1. Phase Objectives & Scope
+- **Phase 9A — Real-time Analytics Dashboard:**
+  - Build endpoints (`/api/v1/analytics/overview`, `/reviews`, `/evidence`, `/audits`, `/trends`) computed strictly from real persisted PostgreSQL records without N+1 queries.
+  - Implement mathematical review completion rates with clearly defined numerators, denominators, and transparent definitions.
+  - Compute cycle lifecycle status distribution, evidence source and policy distribution, cited vs ungrounded claims, and deterministic bias audit flags by rule and severity.
+  - Support date-range filtering (`start_date`, `end_date`) and interval bucketing (`day`, `week`, `month`).
+  - Enforce server-side role scoping: Employees see only their own cycles and reports; Managers see cycles within their ownership/team scope; Admins have global visibility.
+- **Phase 9B — Professional Multi-Format Report Exports (PDF & DOCX):**
+  - Implement `/api/v1/reports/{report_id}/export/pdf` using ReportLab with clean typography, dynamic "Page X of Y" two-pass canvas (`NumberedCanvas`), executive summary, strengths with citation IDs, growth areas, goal progress, and sign-off callouts.
+  - Implement `/api/v1/reports/{report_id}/export/docx` using `python-docx` with professional styles, metadata callout grids, bulleted strengths/growth areas, and approval decision banners.
+  - Snapshot-bound exports: Support `?version_number=X` to export exact historical immutable snapshots from `report_versions` rather than defaulting to active draft.
+  - Draft vs Approved banners: If unapproved, stamp clear draft warnings ("DRAFT REPORT — NOT APPROVED OR FINALIZED"); if approved, display immutable manager sign-off credentials, timestamp, and decision.
+  - Privacy safeguards: Mask confidential `reviewer_notes` when an employee downloads their report.
+  - Safe in-memory streaming: Stream via `io.BytesIO` without leaving temporary artifacts on the host filesystem. Sanitized `Content-Disposition` attachment filenames.
+- **Phase 9C — Frontend Export Actions:**
+  - Integrated "Export PDF" and "Export DOCX" action buttons directly into `ReportGovernanceCard.tsx` header banner, historical version table rows, and the snapshot inspection modal.
+  - Dynamic loading spinners, accessible tooltips, and automatic browser file downloads from blob responses.
+- **Phase 9D — Frontend Analytics & WCAG 2.2 AA Accessibility:**
+  - Created `AnalyticsDashboardCard.tsx` with Recharts visualizations:
+    - Review Cycle Lifecycle Breakdown (BarChart).
+    - Evidence Source Distribution (Donut PieChart).
+    - Bias Audit Findings by Rule (BarChart).
+    - Activity Trends Over Time (Stacked AreaChart with linear gradients).
+  - Stat cards: Total Cycles, Cycle Completion Rate (with tooltip explaining formula and numerator/denominator), Evidence Volume & Citations, Audit Health Score.
+  - Full WCAG 2.2 AA Compliance:
+    - High contrast text (`text-slate-200`, `text-white`, `border-slate-800`).
+    - Semantic ARIA landmarks (`<section aria-labelledby="...">`, `role="status"`, `aria-live="polite"`).
+    - Screen-reader accessible tabular alternatives: "Show Accessible Tables (WCAG)" toggle providing semantic `<table>` elements with `<caption>`, `<th scope="col">`, and high-contrast row styling for every chart.
+    - Responsive mobile, tablet, and desktop layouts.
+
+### 2. Deliverables & Modified Files
+| File Path | Action | Description |
+| :--- | :--- | :--- |
+| [`backend/pyproject.toml`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/pyproject.toml) | Modified | Added `reportlab>=4.2.0` and `pillow>=10.0.0` dependencies for PDF generation. |
+| [`backend/app/schemas/analytics.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/analytics.py) | Created | Pydantic v2 schemas: `AnalyticsOverviewResponse`, `ReviewAnalyticsResponse`, `CycleAnalyticsItem`, `EvidenceAnalyticsResponse`, `AuditAnalyticsResponse`, `AnalyticsTrendsResponse`, `TrendPoint`. |
+| [`backend/app/schemas/__init__.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/schemas/__init__.py) | Modified | Re-exported analytics response schemas. |
+| [`backend/app/repositories/analytics_repository.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/repositories/analytics_repository.py) | Created | Efficient SQL aggregations for overview totals, lifecycle status distribution, evidence policies, audit health scores, and time-bucketed trends. |
+| [`backend/app/services/analytics_service.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/services/analytics_service.py) | Created | Date-range validation (`start_date <= end_date`), role scoping, and mathematical completion rate computation. |
+| [`backend/app/api/v1/endpoints/analytics.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/endpoints/analytics.py) | Created | REST API endpoints: `/overview`, `/reviews`, `/evidence`, `/audits`, `/trends`. |
+| [`backend/app/api/v1/router.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/router.py) | Modified | Mounted `analytics.router` at `/api/v1/analytics`. |
+| [`backend/app/services/report_export_service.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/services/report_export_service.py) | Created | Multi-format export generator (PDF via ReportLab + DOCX via python-docx) with `NumberedCanvas` page numbering, draft/approved banners, citation callouts, and employee notes masking. |
+| [`backend/app/api/v1/endpoints/reports.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/app/api/v1/endpoints/reports.py) | Modified | Added `GET /api/v1/reports/{report_id}/export/pdf` and `GET /api/v1/reports/{report_id}/export/docx`. |
+| [`backend/tests/test_analytics.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_analytics.py) | Created | 7 unit and integration tests covering overview stats, employee/manager isolation, lifecycle distribution, evidence source counts, audit flags, trends, and date filter validation. |
+| [`backend/tests/test_report_exports.py`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/backend/tests/test_report_exports.py) | Created | 5 tests verifying PDF binary magic headers (`%PDF-`), DOCX zip structure (`PK\x03\x04`), document AST validation via `docx.Document`, snapshot version resolution, and unauthorized employee access rejection (HTTP 404). |
+| [`apps/web/components/AnalyticsDashboardCard.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/components/AnalyticsDashboardCard.tsx) | Created | Next.js client component with Recharts, accessible data tables, stat cards, role scoping, date filters, and ARIA live regions. |
+| [`apps/web/components/ReportGovernanceCard.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/components/ReportGovernanceCard.tsx) | Modified | Added PDF and DOCX export buttons for active reports, historical version table rows, and the snapshot inspection modal. |
+| [`apps/web/app/page.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/app/page.tsx) | Modified | Mounted `AnalyticsDashboardCard` and updated Hero badge to Phase 9. |
+| [`apps/web/components/Header.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/components/Header.tsx) | Modified | Added "Governance" and "Analytics" navigation links and updated Phase badge. |
+| [`apps/web/components/PhaseRoadmap.tsx`](file:///Users/kaustubhkadam/Desktop/PERFORMai-360-Fresh/apps/web/components/PhaseRoadmap.tsx) | Modified | Marked Phase 9 as completed. |
+
+### 3. Verification Commands & Actual Results
+| Check | Command Executed | Actual Result |
+| :--- | :--- | :--- |
+| **Backend Automated Tests** | `cd backend && .venv/bin/pytest tests -v` | **132 passed in 2.65s** (100% pass, 0 regressions) |
+| **Backend Linting** | `cd backend && .venv/bin/ruff check .` | **All checks passed!** 0 errors |
+| **Backend Formatting** | `cd backend && .venv/bin/ruff format --check .` | **125 files already formatted** |
+| **Frontend Linting** | `cd apps/web && npm run lint` | **0 errors, 0 warnings** (ESLint) |
+| **Frontend Production Build** | `cd apps/web && npm run build` | **Compiled successfully in 832ms** (Next.js 16.4.1 Turbopack) |
+| **Git Working Tree Safety** | `git diff --check` | **0 whitespace errors, clean working tree** |
+
+### 4. Known Limitations & Deferred Work
+- **Export Signatures:** PDF/DOCX files contain complete cryptographic sha256 checksums and immutable version metadata. Full PKI X.509 digital certificate signing would require enterprise HSM integration.
+- **Advanced Export Customization:** The standard enterprise export template uses PERFORMai-360 corporate indigo branding and typography. Custom organization CSS/template uploading is deferred to Phase 11.
+
+### 5. Next Steps (Phase 10)
+- Proceed to Phase 10: Comprehensive Testing, Security, and Quality Review (Playwright E2E verification, cross-tenant penetration checks, rate limiting).

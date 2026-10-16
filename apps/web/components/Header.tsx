@@ -30,7 +30,7 @@ export function Header() {
                 <span className="text-purple-400">-360</span>
               </span>
               <span className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 text-xs font-semibold text-indigo-300">
-                Phase 1 Foundation
+                Phase 9 Analytics &amp; Exports
               </span>
             </div>
             <p className="text-xs text-slate-400">
@@ -48,16 +48,22 @@ export function Header() {
             Overview
           </a>
           <a
+            href="#governance"
+            className="text-sm font-medium text-slate-300 transition-colors hover:text-white"
+          >
+            Governance
+          </a>
+          <a
+            href="#analytics"
+            className="text-sm font-medium text-slate-300 transition-colors hover:text-white"
+          >
+            Analytics
+          </a>
+          <a
             href="#health"
             className="text-sm font-medium text-slate-300 transition-colors hover:text-white"
           >
-            Health Probes
-          </a>
-          <a
-            href="#pillars"
-            className="text-sm font-medium text-slate-300 transition-colors hover:text-white"
-          >
-            Core Architecture
+            Health
           </a>
           <a
             href="#roadmap"

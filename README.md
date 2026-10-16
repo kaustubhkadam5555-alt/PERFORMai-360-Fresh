@@ -41,12 +41,12 @@
   [ PostgreSQL Database (SQLAlchemy 2.0 Async + Alembic Migrations) ]
 ```
 
-- **Frontend:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Lucide/Heroicons
-- **Backend:** Python 3.14+, FastAPI, Pydantic v2, SQLAlchemy 2.0 (asyncpg), Greenlet
+- **Frontend:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Recharts, Lucide/Heroicons
+- **Backend:** Python 3.14+, FastAPI, Pydantic v2, SQLAlchemy 2.0 (asyncpg), Greenlet, ReportLab, python-docx
 - **Database:** PostgreSQL 16 (Docker Compose with persistent volume `pgdata`, port 5433)
 - **Agent Orchestration:** LangGraph state machine with deterministic approval pauses
 - **AI Integration:** Provider-neutral adapter with offline mock support (no paid API key required)
-- **Testing & Quality:** pytest + pytest-asyncio + httpx (backend), ESLint (frontend), Ruff (backend)
+- **Testing & Quality:** pytest + pytest-asyncio + httpx (backend, 132 tests, 100% pass), ESLint (frontend), Ruff (backend)
 
 ---
 
@@ -259,6 +259,27 @@ npm run dev
 | `GET/POST`| `/api/v1/review-cycles/{id}/evidence` | List or register evidence directly under a cycle | `200 OK` / `201 Created` |
 | `POST` | `/api/v1/review-cycles/{id}/evidence/upload` | Upload and parse document directly into a review cycle | `201 Created`, `413`, `422` |
 | `GET` | `/api/v1/review-cycles/{id}/evidence/completeness` | Cycle evidence completeness score, source distribution, and explicit gap detection | `200 OK` or `404 Not Found` |
+
+### Report Governance, Versioning & Exports (Phase 8 & Phase 9)
+| Method | Endpoint | Description | Return Status |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/review-cycles/{id}/report` | Retrieve active report with version and approval metadata | `200 OK` |
+| `PATCH` | `/api/v1/reports/{id}/sections/{key}` | Edit section with optimistic concurrency (`base_version_number`) | `200 OK`, `409` |
+| `GET` | `/api/v1/reports/{id}/versions` | List immutable report versions | `200 OK` |
+| `GET` | `/api/v1/reports/{id}/compare` | Deterministic text and structured list diff engine | `200 OK` |
+| `POST` | `/api/v1/reports/{id}/approve` | Version-bound human manager approval | `200 OK`, `409` |
+| `POST` | `/api/v1/reports/{id}/request-revision` | Request revisions on active draft | `200 OK` |
+| `GET` | `/api/v1/reports/{id}/export/pdf` | Export branded PDF report with dynamic "Page X of Y" | `200 OK` |
+| `GET` | `/api/v1/reports/{id}/export/docx` | Export professional Word `.docx` report with styled tables | `200 OK` |
+
+### Performance & Governance Analytics (Phase 9)
+| Method | Endpoint | Description | Return Status |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/analytics/overview` | Review totals, mathematical completion rate, health score | `200 OK` |
+| `GET` | `/api/v1/analytics/reviews` | Review cycle list and lifecycle status distribution | `200 OK` |
+| `GET` | `/api/v1/analytics/evidence` | Evidence source & policy breakdown, cited vs ungrounded claims | `200 OK` |
+| `GET` | `/api/v1/analytics/audits` | Deterministic bias flags by rule, severity, and health score distribution | `200 OK` |
+| `GET` | `/api/v1/analytics/trends` | Time-bucketed trends (`day`, `week`, `month`) | `200 OK` |
 
 ### Foundational Entities (Phase 2)
 | Method | Endpoint | Description | Return Status |

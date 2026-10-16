@@ -68,8 +68,8 @@ export function PhaseRoadmap() {
     {
       phase: "Phase 9",
       name: "Dashboard Polish & Accessibility",
-      status: "upcoming",
-      summary: "Analytics charts (Recharts), WCAG accessibility, keyboard navigation, export.",
+      status: "completed",
+      summary: "PostgreSQL analytics dashboard, Recharts visualizations, PDF/DOCX multi-format report exports, WCAG 2.2 AA accessibility.",
     },
     {
       phase: "Phase 10",

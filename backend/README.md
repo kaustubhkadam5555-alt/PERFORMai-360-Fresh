@@ -36,25 +36,27 @@ backend/
 │   │       │   ├── goals.py          # Goal tracking & progress management
 │   │       │   ├── evidence.py       # Evidence upload, retrieval & access policy management
 │   │       │   ├── review_analysis.py # Evidence-grounded AI review analysis endpoints
-│   │       │   └── bias_audit.py     # Deterministic bias & quality audit endpoints
+│   │       │   ├── bias_audit.py     # Deterministic bias & quality audit endpoints
+│   │       │   ├── reports.py        # Report governance, versioning, approvals & PDF/DOCX exports
+│   │       │   └── analytics.py      # Real-time aggregated PostgreSQL analytics
 │   │       └── router.py             # API v1 router aggregator
 │   ├── core/
 │   │   └── config.py                 # Pydantic Settings configuration (LLM, upload limits, storage dir)
 │   ├── db/
 │   │   ├── base.py                   # SQLAlchemy 2.0 Base, naming conventions & mixins
 │   │   └── session.py                # Async SQLAlchemy engine, session generator & health probe
-│   ├── models/                       # SQLAlchemy 2.0 ORM domain entities (13 PRD models)
+│   ├── models/                       # SQLAlchemy 2.0 ORM domain entities (all PRD models)
 │   ├── parsers/                      # Safe document parsers (PDF, DOCX, TXT, CSV) & magic signature validation
 │   ├── schemas/                      # Pydantic v2 validation & serialization schemas
-│   ├── repositories/                 # Repository layer (DB queries, mutations, findings, flags, runs & reports)
-│   ├── services/                     # Business logic, lifecycle, parsing, review analysis, bias audit & workflow services
+│   ├── repositories/                 # Repository layer (DB queries, mutations, analytics, versions, reports)
+│   ├── services/                     # Business logic, analytics, report export (PDF/DOCX), governance services
 │   ├── workflows/                    # Phase 7 LangGraph multi-agent orchestration
 │   │   ├── state.py                  # MultiAgentWorkflowState TypedDict
 │   │   ├── nodes.py                  # 4 specialist agents, HumanApprovalPauseNode, FinalizationNode, RevisionHandlerNode
 │   │   └── graph.py                  # StateGraph compiler, edges, and conditional routing
 │   └── main.py                       # FastAPI application entry point, CORS & lifespan
 ├── migrations/                       # Alembic async migration scripts & env.py
-├── tests/                            # Pytest test suite (109 automated tests, 100% pass)
+├── tests/                            # Pytest test suite (132 automated tests, 100% pass)
 ├── alembic.ini                       # Alembic database migration configuration
 └── pyproject.toml                    # Dependency specifications & tool configs
 ```
@@ -196,6 +198,29 @@ ruff format . --check
 | `POST` | `/api/v1/review-cycles/{cycle_id}/evidence` | Register evidence directly under a review cycle |
 | `POST` | `/api/v1/review-cycles/{cycle_id}/evidence/upload` | Upload and parse document directly into a review cycle |
 | `GET` | `/api/v1/review-cycles/{cycle_id}/evidence/completeness` | Cycle evidence completeness score, source distribution, and explicit gap detection |
+
+### Report Governance, Versioning & Exports (Phase 8 & Phase 9)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/review-cycles/{cycle_id}/report` | Retrieve active report for cycle with version and approval metadata |
+| `PATCH` | `/api/v1/reports/{report_id}/sections/{section_key}` | Edit section with optimistic concurrency (`base_version_number`) |
+| `GET` | `/api/v1/reports/{report_id}/versions` | List historical immutable report versions |
+| `GET` | `/api/v1/reports/{report_id}/versions/{version_number}` | Retrieve exact structured snapshot for historical version |
+| `GET` | `/api/v1/reports/{report_id}/compare` | Deterministic diff comparison between two versions |
+| `POST` | `/api/v1/reports/{report_id}/approve` | Version-bound human manager approval |
+| `POST` | `/api/v1/reports/{report_id}/request-revision` | Request revisions on active report draft |
+| `GET` | `/api/v1/reports/{report_id}/audit-events` | Fetch immutable governance audit events |
+| `GET` | `/api/v1/reports/{report_id}/export/pdf` | Export branded PDF report with dynamic page count & sign-off callouts |
+| `GET` | `/api/v1/reports/{report_id}/export/docx` | Export professional Word `.docx` report with styled tables & decision banner |
+
+### Performance & Governance Analytics (Phase 9)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/analytics/overview` | Review totals, mathematical completion rate, health score, governance metrics |
+| `GET` | `/api/v1/analytics/reviews` | Review cycle list and lifecycle status distribution |
+| `GET` | `/api/v1/analytics/evidence` | Evidence source & policy breakdown, cited vs ungrounded claims |
+| `GET` | `/api/v1/analytics/audits` | Deterministic bias flags by rule, severity, and health score distribution |
+| `GET` | `/api/v1/analytics/trends` | Time-bucketed trends (`day`, `week`, `month`) for cycles, evidence & approvals |
 
 ### Foundational Entities (Phase 2)
 | Method | Endpoint | Description |

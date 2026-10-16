@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    analytics,
     bias_audit,
     evidence,
     feedback,
@@ -40,3 +41,6 @@ api_v1_router.include_router(workflows.router)
 
 # Mount Human Approval, Report Versioning & Governance endpoints (Phase 8)
 api_v1_router.include_router(reports.router)
+
+# Mount Analytics & Trends endpoints (Phase 9)
+api_v1_router.include_router(analytics.router)

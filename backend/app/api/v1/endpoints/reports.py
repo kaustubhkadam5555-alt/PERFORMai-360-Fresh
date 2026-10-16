@@ -2,6 +2,7 @@ import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -16,6 +17,7 @@ from app.schemas.report_governance import (
     SectionEditRequest,
     VersionComparisonResponse,
 )
+from app.services.report_export_service import ReportExportService
 from app.services.report_governance_service import ReportGovernanceService
 
 router = APIRouter(tags=["reports"])
@@ -392,4 +394,97 @@ async def get_report_audit_events(
         viewer_id=effective_viewer_id,
         viewer_role=effective_viewer_role,
         limit=limit,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 9: PDF & DOCX Export Endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/reports/{report_id}/export/pdf",
+    summary="Export review report as professional PDF",
+    description=(
+        "Generates a downloadable, branded PDF performance review document with exact version identification, "
+        "human manager approval metadata, structured strengths and citations, growth opportunities, and goals."
+    ),
+    responses={
+        200: {
+            "content": {"application/pdf": {}},
+            "description": "Downloadable binary PDF document",
+        }
+    },
+)
+async def export_report_pdf(
+    report_id: uuid.UUID,
+    version_number: Optional[int] = Query(default=None, description="Specific version number to export"),
+    version_id: Optional[uuid.UUID] = Query(default=None, description="Specific version ID to export"),
+    viewer_id: Optional[uuid.UUID] = Query(default=None),
+    viewer_role: Optional[str] = Query(default=None),
+    x_viewer_id: Optional[uuid.UUID] = Header(default=None, alias="X-Viewer-Id"),
+    x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    effective_viewer_id = viewer_id or x_viewer_id
+    effective_viewer_role = viewer_role or x_viewer_role
+    service = ReportExportService(db)
+    pdf_bytes, filename = await service.generate_pdf(
+        report_id=report_id,
+        version_number=version_number,
+        version_id=version_id,
+        viewer_id=effective_viewer_id,
+        viewer_role=effective_viewer_role,
+    )
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Type": "application/pdf",
+        },
+    )
+
+
+@router.get(
+    "/reports/{report_id}/export/docx",
+    summary="Export review report as professional Word DOCX document",
+    description=(
+        "Generates a downloadable, styled Microsoft Word DOCX document with version snapshot identification, "
+        "metadata tables, human approval sign-off details, and evidence citations."
+    ),
+    responses={
+        200: {
+            "content": {"application/vnd.openxmlformats-officedocument.wordprocessingml.document": {}},
+            "description": "Downloadable binary DOCX document",
+        }
+    },
+)
+async def export_report_docx(
+    report_id: uuid.UUID,
+    version_number: Optional[int] = Query(default=None, description="Specific version number to export"),
+    version_id: Optional[uuid.UUID] = Query(default=None, description="Specific version ID to export"),
+    viewer_id: Optional[uuid.UUID] = Query(default=None),
+    viewer_role: Optional[str] = Query(default=None),
+    x_viewer_id: Optional[uuid.UUID] = Header(default=None, alias="X-Viewer-Id"),
+    x_viewer_role: Optional[str] = Header(default=None, alias="X-Viewer-Role"),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    effective_viewer_id = viewer_id or x_viewer_id
+    effective_viewer_role = viewer_role or x_viewer_role
+    service = ReportExportService(db)
+    docx_bytes, filename = await service.generate_docx(
+        report_id=report_id,
+        version_number=version_number,
+        version_id=version_id,
+        viewer_id=effective_viewer_id,
+        viewer_role=effective_viewer_role,
+    )
+    return Response(
+        content=docx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        },
     )

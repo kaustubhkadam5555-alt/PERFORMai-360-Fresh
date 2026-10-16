@@ -269,7 +269,28 @@ erDiagram
 
 ---
 
-## 7. Phased Implementation Strategy
+## 7. Analytics, Report Exports, and Accessibility Architecture (Phase 9)
+
+### Real-Time SQL Analytics Engine
+- **Direct Aggregations:** Computes metrics (overview, lifecycle distribution, evidence sources, bias rules, activity trends) strictly via SQLAlchemy PostgreSQL aggregation queries without N+1 loops.
+- **Strict Completion Rate:** Mathematically defined as `finalized_cycles / total_cycles` with explicit numerator and denominator exposed.
+- **Hierarchical Access Scoping:** Queries dynamically filter by `cycle.owner_id == viewer_id` (manager scope) or `cycle.employee_id == viewer_id` (employee scope) ensuring zero cross-tenant or cross-employee information disclosure.
+
+### Multi-Format Export Architecture (PDF & DOCX)
+- **Separation of Concerns:** Export rendering logic is isolated inside `app/services/report_export_service.py`, keeping API route handlers lean.
+- **PDF Generation (`ReportLab`):** Uses a two-pass `NumberedCanvas` to calculate total pages dynamically ("Page X of Y"), structured story flow, metadata grid, strengths/growth callouts with citation IDs, and approval/draft decision stamps.
+- **Word Generation (`python-docx`):** Produces styled `.docx` files with formatted headings, callout tables, bulleted strengths/growth areas, and approval decision banners.
+- **Version Pinning:** Supports exporting historical snapshots (`?version_number=X`) directly from `report_versions` to guarantee that exported artifacts match the exact signed-off review state.
+- **Safe In-Memory Streaming:** Output is generated into `io.BytesIO` streams, eliminating temporary disk artifacts and directory traversal risks.
+
+### Accessibility Standards (WCAG 2.2 AA)
+- **Visual Contrast & Semantic Landmarks:** Proper HTML5 landmark roles (`<header>`, `<main>`, `<section aria-labelledby="...">`), high contrast color palette, and logical focus indicators.
+- **Alternative Tabular Representations:** Recharts visualizations provide a user-toggleable semantic `<table>` alternative (`showDataTables`) with `<caption>`, `<th scope="col">`, and high-contrast row styling for screen readers and assistive technology.
+- **Live Status Announcements:** ARIA live regions (`role="status"`, `aria-live="polite"`) communicate loading, error, and refresh events.
+
+---
+
+## 8. Phased Implementation Strategy
 
 Development is executed sequentially across twelve controlled phases:
 - **Phase 0:** Repository and Planning Baseline *(Completed)*
@@ -281,6 +302,6 @@ Development is executed sequentially across twelve controlled phases:
 - **Phase 6:** Deterministic Bias & Evidence-Quality Audit Engine *(Completed)*
 - **Phase 7:** LangGraph Multi-Agent Orchestration *(Completed)*
 - **Phase 8:** Human Approval, Report Versioning, and Governance *(Completed)*
-- **Phase 9:** Dashboard Polish, Accessibility, and Export
+- **Phase 9:** Dashboard Polish, Accessibility, and Export *(Completed)*
 - **Phase 10:** Comprehensive Testing, Security, and Quality Review
 - **Phase 11:** Final Documentation, Evaluation Metrics, and Demonstration Readiness

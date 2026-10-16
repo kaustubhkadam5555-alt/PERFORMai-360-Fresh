@@ -1,3 +1,12 @@
+from app.schemas.analytics import (
+    AnalyticsOverviewResponse,
+    AnalyticsTrendsResponse,
+    AuditAnalyticsResponse,
+    CycleAnalyticsItem,
+    EvidenceAnalyticsResponse,
+    ReviewAnalyticsResponse,
+    TrendPoint,
+)
 from app.schemas.bias_flag import (
     AuditExecutionRequest,
     AuditSummaryResponse,
@@ -139,4 +148,11 @@ __all__ = [
     "GovernanceAuditEventResponse",
     "GovernanceAuditListResponse",
     "ReportDetailResponse",
+    "AnalyticsOverviewResponse",
+    "ReviewAnalyticsResponse",
+    "CycleAnalyticsItem",
+    "EvidenceAnalyticsResponse",
+    "AuditAnalyticsResponse",
+    "TrendPoint",
+    "AnalyticsTrendsResponse",
 ]
